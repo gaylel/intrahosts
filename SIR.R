@@ -40,7 +40,7 @@ reed_frost_multi<-function(I0=1, N=100, NHosts=2, q0=0.99, q1=0.99)
 	      p[1,NHosts+1] = p[1,NHosts+1]*(q^I[n-1,i]) ;
 	  }
 	  p<-p/sum(p) ;
-	  print(p) ;
+	  #print(p) ;
 	  It[j,]<-rmultinom(1,S[1,j],p) ; 
 	  
 	  I[n,j]<- sum(It[j,1:NHosts]);
@@ -60,11 +60,11 @@ reed_frost_multi<-function(I0=1, N=100, NHosts=2, q0=0.99, q1=0.99)
   return(list(I=I));
 }
 
-reed_frost_multi.2<-function(I0=1, N, NHosts, q0=0.99, q1=0.99)
+reed_frost_multi.2<-function(I0=1, N, NHosts, q0=0.999, q1=0.9999)
 {
   # evolution of viral population sizes in multiple hosts
   niters<-50;
-  I<-matrix(0,nrow=50,ncol=NHosts) ;
+  I<-matrix(0,nrow=niters,ncol=NHosts) ;
   I[1,1]<-I0 ;
   Q <- matrix(q1, nrow=NHosts,ncol = NHosts) ;
   for (i in seq(1,NHosts)){
@@ -74,28 +74,34 @@ reed_frost_multi.2<-function(I0=1, N, NHosts, q0=0.99, q1=0.99)
   S <- matrix(N,nrow=1,ncol=NHosts) ;
   S[1,1] <- N - I[1,1] ;
   p <- matrix(0,nrow=1,ncol=NHosts+1) ;
-  .C("sample_SIR2",as.integer(NHosts),as.integer(niters),as.double(as.vector(Q)),as.integer(as.vector(S)),as.integer(as.vector(I))) ;
-  print(S) ;
+  rf<-.C("sample_SIR",as.integer(NHosts),as.integer(niters),as.double(as.vector(Q)),S<-as.integer(as.vector(S)),I<-as.integer(as.vector(I))) ;
+  I<-matrix(rf[[5]],rf[[2]],rf[[1]]) ;
+  
   return(list(I=I));
 }
 
-reed_frost_multi_demo<-function(N=100, NHosts=10)
+reed_frost_multi_demo<-function(N=1000, NHosts=10)
 {
 	dyn.load("SIR.so") ;
-	rf<-reed_frost_multi.2(N,NHosts,q0=0.999,q1=0.9999) ;
+	rf<-reed_frost_multi.2(N=N,NHosts=NHosts,q0=0.999,q1=0.9999) ;
 	return(list(I=rf$I)) ;
 }
+
 
 plot_reed_frost<-function(rf,psfile)
 {
   postscript(psfile,horizontal=FALSE)
   iters<- nrow(rf$I) ;
-  nHosts<-6#ncol(rf$I) ;
-  par(mfrow=c(nHosts,1)) ;
-
+  nHosts<-ncol(rf$I) ;
+  par(mfrow=c(6,1)) ;
   for (i in seq(1,nHosts))
   {
+    if (!((i-1)%%6))
+    {
+    	par(mfrow=c(6,1)) ;
+    }
     plot(1:iters,rf$I[,i],type="b",col="black",xlab="t",ylab=i) ;
+    
   }
   dev.off() 
 }
