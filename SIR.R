@@ -13,55 +13,9 @@ reed_frost<-function(I0=1,N=100, q=0.5,niters=100)
   }
 }
 
-reed_frost_multi<-function(I0=1, N=100, NHosts=2, q0=0.99, q1=0.99)
-{
-  # evolution of viral population sizes in multiple hosts
-  niters<-50;
-  I<-matrix(0,nrow=50,ncol=NHosts) ;
-  I[1,1]<-I0 ;
-  It<-matrix(0,nrow=NHosts, ncol=NHosts) ;
-  
-  S <- matrix(N,nrow=1,ncol=NHosts) ;
-  S[1,1] <- N - I[1,1] ;
-  
- 
-  for (n in seq(2,niters))
-  {
-       for (i in seq(1,NHosts))
-       {
-	  for ( j in seq(1,NHosts))
-	  {
-	      # probability of infection between i and j
-	      q<-ifelse(i==j,q0,q1) ; 
-	      p<-1-q^I[n-1,i] ;
-	      It[i,j]<-rbinom(1,S[1,j],p) ; 
-	  }
-       }
-       
-       for (i in seq(1,NHosts))
-       {
-	  
-	  for ( j in seq(1,NHosts))
-	  {
-	      I[n,j]<- I[n,j] + It[i,j];
-	      
-	  }
-	   
-       }
-       
-       for ( i in seq(1,NHosts))
-       {
-	  S[1,i]<-S[1,i]-It[i,i];
-       }
-       
-       #print(S[1,]);
-       print(I[n,]) ;
-       #print(It);
-  }
-  return(list(I=I));
-}
 
-reed_frost_multi2<-function(I0=1, N=100, NHosts=2, q0=0.99, q1=0.99)
+
+reed_frost_multi<-function(I0=1, N=100, NHosts=2, q0=0.99, q1=0.99)
 {
   # evolution of viral population sizes in multiple hosts
   niters<-50;
@@ -104,6 +58,32 @@ reed_frost_multi2<-function(I0=1, N=100, NHosts=2, q0=0.99, q1=0.99)
        #print(It);
   }
   return(list(I=I));
+}
+
+reed_frost_multi.2<-function(I0=1, N, NHosts, q0=0.99, q1=0.99)
+{
+  # evolution of viral population sizes in multiple hosts
+  niters<-50;
+  I<-matrix(0,nrow=50,ncol=NHosts) ;
+  I[1,1]<-I0 ;
+  Q <- matrix(q1, nrow=NHosts,ncol = NHosts) ;
+  for (i in seq(1,NHosts)){
+  		Q[i,i] <-q0 ;
+  	
+  } 
+  S <- matrix(N,nrow=1,ncol=NHosts) ;
+  S[1,1] <- N - I[1,1] ;
+  p <- matrix(0,nrow=1,ncol=NHosts+1) ;
+  .C("sample_SIR2",as.integer(NHosts),as.integer(niters),as.double(as.vector(Q)),as.integer(as.vector(S)),as.integer(as.vector(I))) ;
+  print(S) ;
+  return(list(I=I));
+}
+
+reed_frost_multi_demo<-function(N=100, NHosts=10)
+{
+	dyn.load("SIR.so") ;
+	rf<-reed_frost_multi.2(N,NHosts,q0=0.999,q1=0.9999) ;
+	return(list(I=rf$I)) ;
 }
 
 plot_reed_frost<-function(rf,psfile)
