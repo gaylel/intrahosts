@@ -80,6 +80,21 @@ reed_frost_multi.2<-function(I0=1, N, NHosts, q0=0.999, q1=0.9999)
   return(list(I=I));
 }
 
+reed_frost_multi.3<-function(I0=1, N, NHosts, q0=0.999, q1=0.9999)
+{
+  # evolution of viral population sizes in multiple hosts
+
+  Q <- matrix(q1, nrow=NHosts,ncol = NHosts) ;
+  for (i in seq(1,NHosts)){
+  		Q[i,i] <-q0 ;
+  } 
+  
+  p <- matrix(0,nrow=1,ncol=NHosts+1) ;
+  I<-.Call("sample_SIR2_R", I0, N, NHosts, Q) ;
+  #return(list(I=I,I2=rf[[6]],I2count=rf[[7]]));
+  return(I) ;
+}
+
 reed_frost_multi_demo<-function(N=1000, NHosts=10)
 {
 	dyn.load("SIR.so") ;
