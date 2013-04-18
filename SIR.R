@@ -95,11 +95,23 @@ reed_frost_multi.3<-function(I0=1, N, NHosts, q0=0.999, q1=0.9999)
   return(I) ;
 }
 
-reed_frost_multi_demo<-function(N=1000, NHosts=10)
+reed_frost_multi_demo<-function(N=100, NHosts=5,q0=0.99,q1=0.9999)
 {
 	dyn.load("SIR.so") ;
-	rf<-reed_frost_multi.2(N=N,NHosts=NHosts,q0=0.999,q1=0.9999) ;
-	return(list(I=rf$I)) ;
+	rf<-reed_frost_multi.3(N=N,NHosts=NHosts,q0=q0,q1=q1) ;
+	tree<-tree_sample(rf,N=N) ;
+	tree<-tree_convert_to_phylo(tree,N=N) ;
+	write.tree(tree,paste("NHosts",NHosts,"N",N,"q0",q0,"q1",q1,"_orig.tree", sep="_")) ;
+	tree<-phylo_convert_to_binphylo(tree) ;
+	tree<-phylo_convertlabels(tree,N=N) ;
+	
+	# save to file
+	write.tree(tree,paste("NHosts",NHosts,"N",N,"q0",q0,"q1",q1,".tree", sep="_")) ;
+	
+	tree$node.label<-NULL ;
+	# without node labels
+	write.tree(tree,paste("NHosts",NHosts,"N",N,"q0",q0,"q1",q1,"2.tree", sep="_")) ;
+	
 }
 
 
@@ -244,14 +256,15 @@ getparent<-function(node,edges)
 
 dfs_tree<-function(node,edges,nl,tl,v)
 {
+	vnode<-match(node,v[1,]) ;
 	# if node is discovered and children explored : go up tree
-	if (v[2,node]==0)
+	if (v[2,vnode]==0)
 	{
 		node<-getparent(node,edges) ;
 	}
 	else 
 	{
-		if (v[2,node]==2)
+		if (v[2,vnode]==2)
 		{
 			# node is undiscovered
 			ch<-getchildren(node,edges) ;
@@ -259,8 +272,8 @@ dfs_tree<-function(node,edges,nl,tl,v)
 			# if has more than one child mark as unexplored
 			if (length(ch) > 1)
 			{		
-				v[2,node]<-1 ;
-				v[3,node]<-nl ;
+				v[2,vnode]<-1 ;
+				v[3,vnode]<-nl ;
 				nl<-nl+1 ;
 				node<-ch[1];
 			}
@@ -269,13 +282,13 @@ dfs_tree<-function(node,edges,nl,tl,v)
 				# if no children then a leaf node
 				if (length(ch)==0)
 				{
-					v[2,node]<-0 ;
-					v[3,node]<-tl ;
+					v[2,vnode]<-0 ;
+					v[3,vnode]<-tl ;
 					tl<-tl+1 ;
 				}
 				else
 				{
-					v[2,node]<-0 ;
+					v[2,vnode]<-0 ;
 					#v[3,node]<-nl ;
 					#nl<-nl+1 ;
 					node<-ch[1] ;
@@ -286,11 +299,11 @@ dfs_tree<-function(node,edges,nl,tl,v)
 		{
 			# node is discovered but children not explored
 			ch<-getchildren(node,edges) ;
-			vch<-v[2,ch] ;
+			vch<-v[2,match(ch,v[1,])] ;
 			if (sum(vch) == 0)
 			{
 				# all children are discovered ...
-				v[2,node]<-0 ;
+				v[2,vnode]<-0 ;
 				
 			}
 			else
@@ -381,12 +394,17 @@ tree_convert_to_phylo<-function(tre,N)
  nl<-ntips+1 ;
  
  # nodes
- v<-seq(min(tre$edge),max(tre$edge)) ;
+ u<-c(unlist(tre$edge[,1]),unlist(tre$edge[,2])) ;
+ u<-sort(unique(u)) ;
+ 
+ #v<-seq(min(tre$edge),max(tre$edge)) ;
+ v<-u ;
  # flags
  v<-rbind(v,rep(2,length(v))) ;
  # new node names
  v<-rbind(v,rep(0,ncol(v))) ;
  
+
  dtr<-list(node=rt,nl=nl,tl=tl,v=v) ;
  
  while (sum(dtr$v[2,]>0))
@@ -396,10 +414,13 @@ tree_convert_to_phylo<-function(tre,N)
  
  # relabel nodes
  te<-matrix(0,nrow(tre$edge),2) ;
- for (i in seq(min(tre$edge),max(tre$edge)))
+
+ 
+ for (i in u)
  {
- 	te[which(tre$edge==i)]<-dtr$v[3,i] ;
+ 	te[which(tre$edge==i)]<-dtr$v[3,match(i,dtr$v[1,])] ;
  }
+ 
  #tre$edge<-te ;
  elen<-tre$edge.length ;
  te2<-tre$edge ;
@@ -424,11 +445,14 @@ tree_convert_to_phylo<-function(tre,N)
  # label internal nodes
  m1<-match(seq(ntips+1,ntips+nnode),dtr$v[3,]) ;
  
- tre$node.label <- as.character(ceiling(m1/N))
+ tre$node.label <- as.character(ceiling(v[1,m1]/N))
  tre$edge.length <- elen ;
  tre$edge <- te;
  tre$Nnode <-nnode ; 
-  
+ 
+ # label tips
+ m1<-match(seq(1,ntips),dtr$v[3,]) ;
+ tre$tip.label<- as.character(v[1,m1]) ;  
   
  class(tre)<-"phylo" ;
  return(tre) ;
