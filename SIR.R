@@ -111,7 +111,7 @@ reed_frost_multi_demo<-function(N=100, NHosts=5,q0=0.99,q1=0.9999)
 	tree$node.label<-NULL ;
 	# without node labels
 	write.tree(tree,paste("NHosts",NHosts,"N",N,"q0",q0,"q1",q1,"2.tree", sep="_")) ;
-	
+	return(list(rf=rf,tree=tree)) ;
 }
 
 

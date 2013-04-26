@@ -1,0 +1,387 @@
+cSIR<-function(I0=1,nS=100,br=2,dr=1,maxiters=50)
+{
+	S<-nS-I0 ;
+	I<-I0 ;
+	T<-0 ;
+
+	n<-1 ;
+	while(I[n]>0 & n<maxiters) {
+		r<-c((br/nS)*I[n]*S[n],dr*I[n]) ;
+		
+		# draw time interval
+		T[n+1]<-rexp(1,sum(r)) + T[n];
+		
+		# draw event
+		e<- sample(c(1,2),1,prob=r) ;
+		
+		I[n+1]<-I[n] ;
+		S[n+1]<-S[n] ;
+		if (e==1)
+		{
+			I[n+1]<-I[n+1] + 1;
+			S[n+1]<-S[n+1] - 1;
+		}
+		else
+		{
+			I[n+1]<-I[n+1] - 1;
+		}
+		
+		
+		n<-n+1 ;
+		
+	}
+	return(list(S=S,I=I,T=T)) ;
+}
+
+cSIR_multi<-function(nHosts=2,I0=1,nS=100,br=2,br2=1,dr=1,maxiters=50)
+{
+	# between host transmission rates
+	B<-matrix(br2,nrow=nHosts,ncol=nHosts) ;
+	for (i in seq(1,nHosts))
+	{
+		B[i,i]<-br ;
+	}
+	
+	S<-matrix(nS,nrow=1,ncol=nHosts) ;
+	S[1,1]<-nS-I0 ;
+	
+	I<-matrix(0,nrow=1,ncol=nHosts) ;
+	I[1,1]<-I0 ;
+	
+	T<-matrix(0,nrow=1,ncol=4) ;
+	T[1,1]<-0 ;
+
+	R<-matrix(0,nrow=nHosts,ncol=nHosts+1) ;
+	n<-1 ;
+	
+	while(any(I[n,]>0) & n<maxiters) {
+		
+		R[,nHosts+1]<-I[n,]*dr ;
+		R[1:nHosts,1:nHosts]<-matrix(I[n,],nHosts,nHosts,byrow=TRUE)*matrix(S[n,],nHosts,nHosts)*B/nS ;
+		#r<-c((br/nS)*I[n]*S[n],dr*I[n]) ;
+		
+		# draw time interval
+		T<-rbind(T,rep(0,4)) ;
+		T[n+1,1]<-rexp(1,sum(R)) + T[n];
+		
+		# draw event
+		e<- sample(1:length(R),1,prob=as.vector(R)) ;
+		ec<-ceiling(e/nHosts) ;
+		er<-e-(ec-1)*nHosts ;
+		
+		I<-rbind(I,I[n,]);
+		#I[n+1,]<-I[n,] ;
+		
+		S<-rbind(S,S[n,]) ;
+		#S[n+1,]<-S[n,] ;
+		
+		if (ec==(nHosts+1))
+		{
+			I[n+1,er]<-I[n+1,er] - 1;
+			T[n+1,4]<- -1 ;
+			T[n+1,2:3]<-er ;
+		}
+		else
+		{
+		
+			I[n+1,er]<-I[n+1,er] + 1;
+			S[n+1,er]<-S[n+1,er] - 1;
+			T[n+1,4]<-1 ;
+			T[n+1,2]<-ec ;
+			T[n+1,3]<-er ;
+		}
+		
+		
+		
+		
+		n<-n+1 ;
+		
+	}
+	return(list(S=S,I=I,T=T)) ;
+}
+
+cSIR_tree_sample<-function(sir,N=100)
+{
+	I<-sir$I ;
+	S<-sir$S ;
+	T<-sir$T ;
+	nT<-nrow(T) ;
+	nHosts<-ncol(I) ;
+	g<-NULL ;
+	el<-NULL ;
+
+	nl<-matrix(1,nrow=1,ncol=nHosts) ;
+	Nodes<-list() ;
+	
+	for (i in seq(1,nHosts))
+	{
+		Nodes[[i]]<-integer(0) ;
+	}
+	i<-which(I[1,]>0) ;
+	nl[i]<-nl[i]+1;
+	Nodes[[i]]<-paste(i,1,sep=":") ;
+	
+	for (t in seq(2,nT))
+	{
+		#if (T[t,4]==1)
+		#{
+		#	hb<-T[t,3] ;
+		#	hind<-(hb-1)*N ;
+		#	node_p<-sample(Nodes[[hb]],1) ;
+		#	node_notp<-setdiff(Nodes[[hb]],node_p) ;
+		#	m<-match(node_notp,g[2,]) ;
+		#	el[m]<-el[m]+T[t,1]-T[t-1,1] ;
+		#	g<-cbind(g,hind+c(node_p,nl[hb]));
+		#	el<-cbind(el,T[t,1]-T[t-1,1]) ;
+		#	Nodes[[hb]]<-c(Nodes[[hb]],nl[hb]) ;
+		#	nl[hb]<-nl[hb]+1 ;
+		#	g<-cbind(g,hind+c(node_p,nl[hb]));
+		#	el<-cbind(el,T[t,1]-T[t-1,1]) ;
+		#	Nodes[[hb]]<-c(Nodes[[hb]],nl[hb]) ;
+		#	nl[hb]<-nl[hb]+1 ;
+		#	node_notp<-setdiff(Nodes[[hb]],node_p) ;
+		#	Nodes[[hb]]<-node_notp ;
+		#}
+		
+		if (T[t,4]==1)
+		{
+			ha<-T[t,2] ;
+			hb<-T[t,3] ;
+			hbind<-(hb-1)*N ;
+			haind<-(ha-1)*N ;
+			node_p<-sample(Nodes[[ha]],1) ;
+			node_notp<-setdiff(Nodes[[ha]],node_p) ;
+			#m<-match(haind+node_notp,g[2,]) ;
+			m<-match(node_notp,g[2,]) ;
+			el[m]<-el[m]+T[t,1]-T[t-1,1] ;
+			
+			
+			#g<-cbind(g,c(haind + node_p,hbind+nl[hb]));
+			g<-cbind(g,c(node_p,paste(hb,nl[hb],sep=":")));
+			el<-cbind(el,T[t,1]-T[t-1,1]) ;
+			#Nodes[[hb]]<-c(Nodes[[hb]],nl[hb]) ;
+			Nodes[[hb]]<-c(Nodes[[hb]],paste(hb,nl[hb],sep=":")) ;
+			nl[hb]<-nl[hb]+1 ;
+			
+			#g<-cbind(g,haind+c(node_p,nl[ha]));
+			g<-cbind(g,c(node_p,paste(ha,nl[ha],sep=":")));
+			el<-cbind(el,T[t,1]-T[t-1,1]) ;
+			Nodes[[ha]]<-c(Nodes[[ha]], paste(ha,nl[ha],sep=":"));
+			#Nodes[[ha]]<-c(Nodes[[ha]],nl[ha]) ;
+			nl[ha]<-nl[ha]+1 ;
+			node_notp<-setdiff(Nodes[[ha]],node_p) ;
+			Nodes[[ha]]<-node_notp ;
+		}
+		
+		if (T[t,4]==-1)
+		{
+			hb<-T[t,3] ;
+			hbind<-(hb-1)*N ;
+			
+			node_p<-sample(Nodes[[hb]],1) ;
+			node_notp<-setdiff(Nodes[[hb]],node_p) ;
+			#m<-match(hbind+node_notp,g[2,]) ;
+			m<-match(node_p,g[2,]) ;
+			el[m]<-el[m]+T[t,1]-T[t-1,1] ;
+			m<-match(node_notp,g[2,]) ;
+			el[m]<-el[m]+T[t,1]-T[t-1,1] ;
+			Nodes[[hb]]<-setdiff(Nodes[[hb]],node_p) ;
+		}
+		
+		
+	}
+	
+	
+	
+	tre1<-list() ;
+	tre1$edge<-t(g) ;
+    tre1$edge.length<-el;
+    Nnodes<-length(intersect(unlist(g[1,]),unlist(g[2,]))) ;
+	tre1$Nnode<-Nnodes + 1;
+	tips<-setdiff(unlist(g[2,]),unlist(g[1,])) ;
+	tips<-sort(tips) ;
+	tre1$tip.label<-as.character(tips) ;
+	
+	e<-matrix(0,nrow(tre1$edge),2) ;
+	m<-match(tips,tre1$edge[,2]) ;
+	e[m,2]<-seq(1,length(tips)) ;
+	
+	inode<-setdiff(c(unlist(g[2,]),unlist(g[1,])),tips) ;
+	inode<-sort(inode) ;
+	nlabel<-length(tips)+1 ;
+	for (j in 1:length(inode))
+	{
+		m<-which(tre1$edge==inode[j]) ;
+		e[m]<-nlabel ;
+		nlabel<-nlabel+1 ;
+	}
+	tre1$edge<-e ;
+	
+	tlab<-tre1$tip.label ;
+	nlab<-inode ;
+	
+	tlab2<-matrix(unlist(strsplit(tlab,":")),ncol=2,byrow=TRUE) ;
+	nlab2<-matrix(unlist(strsplit(nlab,":")),ncol=2,byrow=TRUE) ;
+	
+	# sort out labels
+	for (i in seq(1, nHosts))
+	{
+		j<-which(tlab2[,1]==as.character(i)) ;
+		hname<-paste("H",i,sep="") ;
+		tlab[j]<-paste(hname,paste("S",1:length(j),sep=""),sep=":")
+		
+		j<-which(nlab2[,1]==as.character(i)) ;
+		nlab[j]<-as.character(i) ;
+	}
+	tre1$tip.label<-tlab ;
+	tre1$node.label<-nlab ;
+	
+	
+	class(tre1)<-"phylo" ;
+	return(tre1);
+	
+}
+
+
+cSIR_tree_sample2<-function(sir,N=100)
+{
+	I<-sir$I ;
+	S<-sir$S ;
+	T<-sir$T ;
+	nT<-nrow(T) ;
+	nHosts<-ncol(I) ;
+	g<-NULL ;
+	el<-NULL ;
+
+	nl<-matrix(1,nrow=1,ncol=nHosts) ;
+	Nodes<-list() ;
+	
+	for (i in seq(1,nHosts))
+	{
+		Nodes[[i]]<-integer(0) ;
+	}
+	
+	i<-which(I[1,]>0) ;
+	node_p<-paste(i,nl[i],sep=":") ;
+	nl[i]<-nl[i]+1;
+	
+	g<-rbind(node_p,paste(i,nl[i],sep=":")) ;
+	
+	for (j in i)
+	{
+	Nodes[[i[j]]]<-paste(i[j],nl[i[j]],sep=":") ;
+	}
+	nl[i]<-nl[i]+1;
+	
+	el<-rep(0,length(i)) ;
+	
+	for (t in seq(2,nT))
+	{
+		
+		
+		for (n in seq(1,nHosts))
+		{
+			m<-match(Nodes[[n]],g[2,]) ;
+			el[m]<-el[m]+T[t,1]-T[t-1,1] ;
+		}
+		
+		if (T[t,4]==1)
+		{
+			ha<-T[t,2] ;
+			hb<-T[t,3] ;
+			node_p<-sample(Nodes[[ha]],1) ;
+			#node_notp<-setdiff(Nodes[[ha]],node_p) ;
+			#m<-match(node_notp,g[2,]) ;
+			
+			#m<-match(Nodes[[ha]],g[2,]) ;
+			#el[m]<-el[m]+T[t,1]-T[t-1,1] ;
+			
+			
+			#g<-cbind(g,c(haind + node_p,hbind+nl[hb]));
+			g<-cbind(g,c(node_p,paste(hb,nl[hb],sep=":")));
+			el<-cbind(el,0) ;
+			#Nodes[[hb]]<-c(Nodes[[hb]],nl[hb]) ;
+			Nodes[[hb]]<-c(Nodes[[hb]],paste(hb,nl[hb],sep=":")) ;
+			nl[hb]<-nl[hb]+1 ;
+			
+			#g<-cbind(g,haind+c(node_p,nl[ha]));
+			g<-cbind(g,c(node_p,paste(ha,nl[ha],sep=":")));
+			el<-cbind(el,0) ;
+			Nodes[[ha]]<-c(Nodes[[ha]], paste(ha,nl[ha],sep=":"));
+			#Nodes[[ha]]<-c(Nodes[[ha]],nl[ha]) ;
+			nl[ha]<-nl[ha]+1 ;
+			node_notp<-setdiff(Nodes[[ha]],node_p) ;
+			Nodes[[ha]]<-node_notp ;
+		}
+		
+		if (T[t,4]==-1)
+		{
+			hb<-T[t,3] ;
+		
+			
+			node_p<-sample(Nodes[[hb]],1) ;
+			#node_notp<-setdiff(Nodes[[hb]],node_p) ;
+			#m<-match(hbind+node_notp,g[2,]) ;
+			
+			#m<-match(node_p,g[2,]) ;
+			#el[m]<-el[m]+T[t,1]-T[t-1,1] ;
+			#m<-match(node_notp,g[2,]) ;
+			
+			#m<-match(Nodes[[hb]],g[2,]) ;
+			#el[m]<-el[m]+T[t,1]-T[t-1,1] ;
+			Nodes[[hb]]<-setdiff(Nodes[[hb]],node_p) ;
+		}
+		
+		
+	}
+	
+	
+	
+	tre1<-list() ;
+	tre1$edge<-t(g) ;
+    tre1$edge.length<-el;
+    Nnodes<-length(intersect(unlist(g[1,]),unlist(g[2,]))) ;
+	tre1$Nnode<-Nnodes + 1;
+	tips<-setdiff(unlist(g[2,]),unlist(g[1,])) ;
+	tips<-sort(tips) ;
+	tre1$tip.label<-as.character(tips) ;
+	
+	e<-matrix(0,nrow(tre1$edge),2) ;
+	m<-match(tips,tre1$edge[,2]) ;
+	e[m,2]<-seq(1,length(tips)) ;
+	
+	inode<-setdiff(c(unlist(g[2,]),unlist(g[1,])),tips) ;
+	inode<-sort(inode) ;
+	nlabel<-length(tips)+1 ;
+	for (j in 1:length(inode))
+	{
+		m<-which(tre1$edge==inode[j]) ;
+		e[m]<-nlabel ;
+		nlabel<-nlabel+1 ;
+	}
+	tre1$edge<-e ;
+	
+	tlab<-tre1$tip.label ;
+	nlab<-inode ;
+	
+	tlab2<-matrix(unlist(strsplit(tlab,":")),ncol=2,byrow=TRUE) ;
+	nlab2<-matrix(unlist(strsplit(nlab,":")),ncol=2,byrow=TRUE) ;
+	
+	# sort out labels
+	for (i in seq(1, nHosts))
+	{
+		j<-which(tlab2[,1]==as.character(i)) ;
+		hname<-paste("H",i,sep="") ;
+		tlab[j]<-paste(hname,paste("S",1:length(j),sep=""),sep=":")
+		
+		j<-which(nlab2[,1]==as.character(i)) ;
+		nlab[j]<-as.character(i) ;
+	}
+	tre1$tip.label<-tlab ;
+	tre1$node.label<-nlab ;
+	
+	
+	class(tre1)<-"phylo" ;
+	return(tre1);
+	
+}
