@@ -385,3 +385,67 @@ cSIR_tree_sample2<-function(sir,N=100)
 	return(tre1);
 	
 }
+
+cSIR_p_recover<-function(nS,br,dr,s)
+{
+	p<-dr/(dr + ((br/nS)*s)) ;
+	return(p) ;
+}
+
+cSIR_tmx<-function(nHosts=1,I0=1,nS=5,br=2,br2=1,dr=1,maxiters=50)
+{
+
+	# construct the transition matrix
+	nstates<-(nS+1)*(nS+2)/2
+	#nstates<-(nS*(nS+1))/2 ;
+	T<-matrix(0,nrow=nstates,ncol=nstates) ;
+	for (i in seq(1,nS))
+	{
+		T[i,i]<-1;
+	} 
+	
+	c1<-c(nS,2*nS -1) ;
+	
+	r1<-c(0,nS) ;
+	r2<-c(2*nS-1, 2*nS-1 + nS-2);
+	
+	
+	
+	
+	for (i in seq(nS,2,by=-1))
+	{
+		c1[1]<-c1[1]+1 ;
+		r1[1]<-r1[1]+1 ;
+		r2[1]<-r2[1]+1 ;
+		A<-matrix(0,nrow=i,ncol=i-1) ;
+		B<-matrix(0,nrow=i-2,ncol=i-1) ;
+		
+		if (i-2 >=1)
+		{
+		for (j in seq(i-2,1,by=-1))
+		{
+			p<-cSIR_p_recover(nS=nS,br=br,dr=dr,s=j) ;
+			A[i-j,i-1-j]<-p ;
+			B[i-j-1,i-j-1] <-(1-p) ;	
+		}
+		}
+		A[i,i-1]<-cSIR_p_recover(nS=nS,br=br,dr=dr,s=0) ;
+		if (r1[2] <=nstates && c1[2]<=nstates)
+		{
+			T[r1[1]:r1[2],c1[1]:c1[2]]<-A ;
+		}
+		
+		if (r2[1] <=nstates )
+		{
+			T[r2[1]:r2[2],c1[1]:c1[2]]<-B ;
+		}
+		
+		r1[1]<-r1[2] ;
+		r2[1]<-r2[2] ;
+		c1[1]<-c1[2] ;
+		r1[2]<-r1[2]+i-1 ;
+		r2[2]<-r2[2]+i-3 ;
+		c1[2]<-c1[2]+i-2 ;
+	}
+	return(T) ;
+}
