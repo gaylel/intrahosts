@@ -243,6 +243,41 @@ cSIR_tree_sample<-function(sir,N=100)
 }
 
 
+cSIR_reconstructedtree<-function(tre, T)
+{
+
+	# find lineages that are extinct before time T
+	nnode<-t$Nnode ;
+	ntips<-length(t$tip.label) ;
+	d<-node.depth.edgelength(t) ;
+	dtips<-d[1:ntips] ;
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	
+	stips<-which(dtips>=T) ;
+	
+	# look for edges spanning the cutoff
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;
+	
+	# new tips
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;
+	tips2<-t$edge[sp,2] ;
+	
+	
+	edges<-t$edge[sp,] ;
+	el<-t$edge.length[sp] ;
+	nodes<-unique(t$edge[sp,1]) ;
+	while (length(nodes)>0)
+	{
+		sp<-match(nodes,t$edge[,2],nomatch=0) ;
+		edges<-rbind(edges,t$edge[sp[sp>0],]) ;
+		el<-c(el,t$edge.length[sp[sp>0]]) ;
+		nodes<-unique(t$edge[sp[sp>0],1]) ;
+	}
+	
+	dup<-duplicated(edges) ;
+	edges<-edges[!dup,] ;
+	el<-el[!dup] ;
+}
+
 cSIR_tree_sample2<-function(sir,N=100)
 {
 	I<-sir$I ;
@@ -403,6 +438,60 @@ cSIR_tmx<-function(nHosts=1,I0=1,nS=5,br=2,br2=1,dr=1,maxiters=50)
 	{
 		T[i,i]<-1;
 	} 
+	
+	c1<-c(nS,2*nS -1) ;
+	
+	r1<-c(0,nS) ;
+	r2<-c(2*nS-1, 2*nS-1 + nS-2);
+	
+	
+	
+	
+	for (i in seq(nS,2,by=-1))
+	{
+		c1[1]<-c1[1]+1 ;
+		r1[1]<-r1[1]+1 ;
+		r2[1]<-r2[1]+1 ;
+		A<-matrix(0,nrow=i,ncol=i-1) ;
+		B<-matrix(0,nrow=i-2,ncol=i-1) ;
+		
+		if (i-2 >=1)
+		{
+		for (j in seq(i-2,1,by=-1))
+		{
+			p<-cSIR_p_recover(nS=nS,br=br,dr=dr,s=j) ;
+			A[i-j,i-1-j]<-p ;
+			B[i-j-1,i-j-1] <-(1-p) ;	
+		}
+		}
+		A[i,i-1]<-cSIR_p_recover(nS=nS,br=br,dr=dr,s=0) ;
+		if (r1[2] <=nstates && c1[2]<=nstates)
+		{
+			T[r1[1]:r1[2],c1[1]:c1[2]]<-A ;
+		}
+		
+		if (r2[1] <=nstates )
+		{
+			T[r2[1]:r2[2],c1[1]:c1[2]]<-B ;
+		}
+		
+		r1[1]<-r1[2] ;
+		r2[1]<-r2[2] ;
+		c1[1]<-c1[2] ;
+		r1[2]<-r1[2]+i-1 ;
+		r2[2]<-r2[2]+i-3 ;
+		c1[2]<-c1[2]+i-2 ;
+	}
+	return(T) ;
+}
+
+cSIR_rmx<-function(nHosts=1,I0=1,nS=5,br=2,br2=1,dr=1,maxiters=50)
+{
+
+	# construct the transition matrix
+	nstates<-(nS+1)*(nS+2)/2
+	#nstates<-(nS*(nS+1))/2 ;
+	Q<-matrix(0,nrow=nstates,ncol=nstates) ;
 	
 	c1<-c(nS,2*nS -1) ;
 	
