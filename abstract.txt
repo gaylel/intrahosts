@@ -1,0 +1,54 @@
+Modelling the epidemiological and evolutionary dynamics of influenza outbreaks 
+G Leen, M Baguelin, ?
+
+Public Health England, 
+
+Background
+
+The rapid evolution of influenza viruses causes their epidemiological and evolutionary dynamics to 
+occur on the same timescale, with complex, reciprocal interactions. Analysing genetic data sampled from
+the viral population taken from a single infected host can quantify the level of genetic diversity present,
+and enable the reconstruction of the underlying phylogenetic tree that generated the sample. Combining the data 
+from multiple hosts can indicate the most likely transmission histories during an epidemic. However, 
+investigating these two dynamical processes separately neglects their potentially important 
+interplay. The within-host viral phylogeny, while shaped by host immunity and population genetic processes
+for the duration of the infection, is additionally affected by transmission bottlenecks and 
+the host's position in the transmission chain, while the transmission is dependent on the
+genetic diversity that is generated within-host.     
+
+Materials and methods
+
+We developed a mathematical model of influenza viral evolution that unified dynamics on 
+the epidemiological and evolutionary scales, given genetic data taken from within-host viral
+populations for multiple infected hosts sampled from an epidemic, and information about sampling times. 
+
+We assumed a metapopulation
+structure where the infected hosts were modelled as distinct viral populations which 
+interact through intra-host transmission events. Each of the within-host viral populations 
+was modelled as a finite set of 'particles' which evolved according to stochastic SIR 
+(susceptible, infected, recovered) dynamics, parameterized by a matrix of infection rates 
+that determined the interaction between each pair of hosts, and within each host, and 
+a recovery rate for each host. At the start of the epidemic, one particle was in the infected 
+state, and the remaining particles were in the susceptible state, and the infected population 
+size trajectory was simulated as the infection moved through the network of particles.
+
+Given the metapopulation history, the underlying genealogy could be reconstructed, where
+an infection event corresponded to a birth of a lineage, and recovery to a death. Mutations
+were then simulated on the tree topology using a parameterized mutation model, and the sequences of 
+the within host viral populations simulated at desired time points.
+
+We used a Markov Chain Monte Carlo (MCMC) framework to infer the tree topology, SIR rate parameters,
+and mutation model parameters, given the genetic data.
+
+We illustrated the performance of our model on an outbreak of equine influenza that 
+occurred in spring 2003 in Newmarket, UK. Within-host viral populations were sampled from 
+horses infected with equine influenza virus (EIV) through nasal swabs taken from 199 individual
+horses. The HA region was cloned using PCR and sequenced using ABI 3730 x1 capillary sequencing,
+resulting in 2222 sequences covering 90% of the infected yards. 
+
+Results
+
+
+
+Conclusions
+
