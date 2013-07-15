@@ -12,7 +12,7 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 void cSIR_iters(int *n, int I0, int nS, int NHosts, double *B, double dr, int **p1, double **p2) ;
 void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN) ;
 int check_infectives(int *I, int NHosts, int t) ;
-int check_sampled(double *ST, int NHosts, int t_n, int t_n1 ) ;
+int check_sampled(double *ST, int NHosts, double t_n, double t_n1 ) ;
 
 SEXP sample_cSIR_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr)
 {
@@ -80,12 +80,12 @@ SEXP sample_cSIR_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr)
 SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN)
 {
 	
-	int I0, NS, NHosts, *S, *I, *T, *R, **p_RVAL1 = Calloc(2,int*),*n=Calloc(1,int),i,j;
-	int *PR_I, *PR_S, *SN;
+	int I0, NS, NHosts, *S, *I, *T, *R, **p_RVAL1 = Calloc(3,int*),*n=Calloc(1,int),i,j;
+	int *PR_I, *PR_S, *PR_Iend, *SN;
 	double *B, **p_RVAL2 = Calloc(1,double*), dr, *PR_T, *ST ;
 	
 	
-	SEXP R_Bdim, R_I, R_T, R_S, R_list ;
+	SEXP R_Bdim, R_I, R_T, R_S, R_Iend, R_list ;
 	
 	// initial number of infective particles
 	R_I0 = coerceVector(R_I0, INTSXP) ;
@@ -123,17 +123,22 @@ SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, S
 	
 	//cSIR_iters(n, I0, NS, NHosts, B, dr, p_RVAL1, p_RVAL2) ;
 	cSIR_iters_ST(n, I0, NS, NHosts, B, dr, p_RVAL1, p_RVAL2, ST, SN) ;
+	
 	PROTECT(R_I=allocMatrix(INTSXP,n[0],NHosts)) ;
 	PROTECT(R_S=allocMatrix(INTSXP,n[0],NHosts)) ;
 	PROTECT(R_T=allocMatrix(REALSXP,n[0],4)) ;
+	PROTECT(R_Iend=allocMatrix(INTSXP,1,NHosts)) ;
 	PR_I = INTEGER(R_I) ;
 	PR_S = INTEGER(R_S) ;
 	PR_T = REAL(R_T) ;
+	PR_Iend = INTEGER(R_Iend) ;
 	
-	for (i=0; i<n[0]; i++)
+	for (j=0; j< NHosts ; j++)
 	{
-		for (j=0; j< NHosts ; j++)
+		PR_Iend[j] = p_RVAL1[2][j] ;
+		for (i=0; i<n[0]; i++)
 		{
+		
 			PR_I[i+j*n[0]]=p_RVAL1[1][i*NHosts + j] ;
 			PR_S[i+j*n[0]]=p_RVAL1[0][i*NHosts + j] ;
 		}
@@ -148,11 +153,19 @@ SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, S
 	}
 	
 	
-	PROTECT(R_list = allocVector(VECSXP ,3)) ;
+	PROTECT(R_list = allocVector(VECSXP ,4)) ;
 	SET_VECTOR_ELT(R_list, 0, R_I) ;
 	SET_VECTOR_ELT(R_list, 1, R_S) ;
 	SET_VECTOR_ELT(R_list, 2, R_T) ;
-	UNPROTECT(4) ;
+	SET_VECTOR_ELT(R_list, 3, R_Iend) ;
+	UNPROTECT(5) ;
+	Free(p_RVAL1[0]) ;
+	Free(p_RVAL1[1]) ;
+	Free(p_RVAL1[2]) ;
+	Free(p_RVAL1) ;
+	Free(p_RVAL2[0]) ;
+	Free(p_RVAL2) ;
+	Free(n) ;
 	return(R_list);
 }
 
@@ -161,13 +174,13 @@ int check_infectives(int *I, int NHosts, int t)
 	int i=0, ep_end=1;
 	while (ep_end==1 && i<NHosts)
 	{
-		if (I[t*NHosts + i]>0) ep_end=0;
+		if (I[t*NHosts + i]!=0) ep_end=0;
 		i++ ;
 	}
 	return(ep_end);
 }
 
-int check_sampled(double *ST, int NHosts, int t_n, int t_n1 )
+int check_sampled(double *ST, int NHosts, double t_n, double t_n1 )
 {
 	// return index of host which was sampled first in the interval (t_n, t_n1)
 	int i, rv=-1 ;
@@ -176,10 +189,13 @@ int check_sampled(double *ST, int NHosts, int t_n, int t_n1 )
 	
 	for (i=0 ; i<NHosts ; i++)
 	{
-		if (ST[i] > t_n && ST[i]<=t_n1 && ST[i] <= tmin)
+		if (ST[i] >= t_n && ST[i]<=t_n1 && ST[i] <= tmin)
 		{
+		
 			tmin=ST[i] ;
 			rv=i ;
+			
+	
 		}
 	}
 	return(rv) ;
@@ -221,18 +237,25 @@ void cSIR_iters(int *n, int I0, int nS, int NHosts, double *B, double dr, int **
 
 void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN)
 {
-	int *pp1[2];
-	double *pp2[1] ;
+	int *pp1[2],i,ot=0;
+	double *pp2[1],tmax=-1 ;
+	for (i=0 ; i<NHosts; i++)
+	{
+	 if (tmax<ST[i]) tmax = ST[i] ;
+	}
+	
 	
 	pp1[0]= Calloc(NHosts,int) ;
 	pp1[1]= Calloc(NHosts,int) ;
+	pp1[2] = Calloc(NHosts, int) ;
 	pp2[0]= Calloc(4,double) ;
 	
-	int i ;
+	
 	for (i=0; i<NHosts ; i++)
 	{
 		pp1[0][i] = nS ;
 		pp1[1][i] = 0 ;
+		pp1[2][i] = 0 ;
 	}
 	
 	pp1[0][0]-=I0 ;
@@ -241,20 +264,26 @@ void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int
 	i=1 ;
 	n[0]=1 ;
 	
-	while (check_infectives(pp1[1],NHosts,n[0]-1)==0 && n[0]<10000)
+	//while (check_infectives(pp1[1],NHosts,n[0]-1)==0 && n[0]<100 && ot==0)
+	while (check_infectives(pp1[1],NHosts,n[0]-1)==0 && ot==0)
 	{
 		cSIR_iter_ST(n, nS, NHosts, B, dr, pp1, pp2, ST, SN) ;
+		
+		if (pp2[0][(n[0])*4]>tmax) ot=1 ;
+		
 		//cSIR_iter(i, nS, NHosts, B, dr, pp1, pp2) ;
 		//i++ ;
 		n[0]++ ;
 	}
 	p1[0]=pp1[0] ;
 	p1[1]=pp1[1] ;
+	p1[2]=pp1[2] ;
 	p2[0]=pp2[0] ;
 	pp1[0]=0;
 	pp1[1]=0;
+	pp1[2]=0;
 	pp2[0]=0;
-	//n[0]=i	;
+	n[0]--	;
 }
 
 
@@ -347,13 +376,14 @@ void cSIR_iter(int n, int nS, int NHosts, double *B, double dr, int **p1, double
 
 void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN)
 {
-	double *R, sumR=0, t_n, Rtot, *T, rand_e, *ST2, T_n;	// rate matrix
+	double *R, sumR=0, t_n, Rtot, *T, rand_e, *ST2, T_n, t_n1;	// rate matrix
 	R = Calloc(NHosts * (NHosts+1),double) ;
 	ST2 = Calloc(NHosts,double) ;
-	int i,j,e,ec,er, *S, *I, t_n1, n, h_i;
+	int i,j,e,ec,er, *S, *I, *Iend, n, h_i;
 	
 	S=p1[0];
 	I=p1[1];
+	Iend=p1[2] ;
 	T=p2[0];
 	n=np[0] ;
 	
@@ -385,6 +415,7 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 	h_i = 1 ;
 	while (h_i >= 0)
 	{
+		
 		h_i = check_sampled(ST2, NHosts, T_n, t_n1 ) ;
 		if (h_i>=0)
 		{
@@ -405,10 +436,16 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 			I[h_i+(n*NHosts)] = 0 ;
 			S[h_i+(n*NHosts)] = 0 ;
 			T[n*4+3] = - I[h_i+((n-1)*NHosts)];
+			Iend[h_i] = I[h_i+((n-1)*NHosts)]; 
 			T[n*4+1] = h_i ;
 			T[n*4+2] = h_i ;	
-			T[n*4] = ST[h_i] ;				
+			T[n*4] = ST[h_i] ;		
+					
+			
+			
 			n++ ;
+			T_n=T[(n-1)*4] ;
+			t_n=t_n1-T_n ;
 		}
 	}
 	
@@ -427,57 +464,77 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 	
 	for (i=0; i<(NHosts*(NHosts+1));i++)
 	{
-		R[i]=R[i]/sumR ;
+		R[i]=(sumR==0) ? 0 : R[i]/sumR ;
 	}
-	// Draw event that happens next from R
-	rand_e = unif_rand();
 	
-	e=0;
-	Rtot=R[0] ;
-	while (Rtot < rand_e)
-	{
-		e++;
-		Rtot+=R[e] ;
-	}	
-	
-	ec =(int) (floor((double)e/NHosts)) ;
-	er =(int) (e-ec*NHosts);
+	// if there are any more infected left ..
 	
 	// increase size of S,I,T
-	S=Realloc(S,(n+1)*NHosts ,int) ;
-	I=Realloc(I,(n+1)*NHosts ,int) ;
-	T=Realloc(T,(n+1)*4 ,double) ;
-	
+		S=Realloc(S,(n+1)*NHosts ,int) ;
+		I=Realloc(I,(n+1)*NHosts ,int) ;
+		T=Realloc(T,(n+1)*4 ,double) ;
 	for (i=0 ; i< NHosts; i++)
 	{
-		S[i+(n*NHosts)] = S[i+((n-1)*NHosts)] ;
-		I[i+(n*NHosts)] = I[i+((n-1)*NHosts)] ;
+			S[i+(n*NHosts)] = S[i+((n-1)*NHosts)] ;
+			I[i+(n*NHosts)] = I[i+((n-1)*NHosts)] ;		
+	}	
 		
-	}
-	
-	
-	if (ec == NHosts)
+	if (check_infectives(&I[0], NHosts, n-1)!=1) 
 	{
-		I[n*NHosts + er] = I[n*NHosts + er] - 1;
-		T[n*4+3] = -1 ;
-		T[n*4+1] = er ;
-		T[n*4+2] = er ;
+		// Draw event that happens next from R
+		rand_e = unif_rand();
+	
+		e=0;
+		Rtot=R[0] ;
+		while (Rtot < rand_e)
+		{
+			e++;
+			Rtot+=R[e] ;
+		}	
+	
+		ec =(int) (floor((double)e/NHosts)) ;
+		er =(int) (e-ec*NHosts);
+	
 		
-	}
-	else
-	{
-		I[n*NHosts + ec] = I[n*NHosts + ec] + 1;
-		S[n*NHosts + ec] = S[n*NHosts + ec] - 1;
-		T[n*4+3] = 1.0 ;
-		T[n*4+1] = er ;
-		T[n*4+2] = ec ;
+		
+	/*
+		for (i=0 ; i< NHosts; i++)
+		{
+			S[i+(n*NHosts)] = S[i+((n-1)*NHosts)] ;
+			I[i+(n*NHosts)] = I[i+((n-1)*NHosts)] ;
+		
+		}
+	*/
+	
+		if (ec == NHosts)
+		{
+			I[n*NHosts + er] = I[n*NHosts + er] - 1;
+			T[n*4+3] = -1 ;
+			T[n*4+1] = er ;
+			T[n*4+2] = er ;
+		
+		}
+		else
+		{
+			I[n*NHosts + ec] = I[n*NHosts + ec] + 1;
+			S[n*NHosts + ec] = S[n*NHosts + ec] - 1;
+			T[n*4+3] = 1.0 ;
+			T[n*4+1] = er ;
+			T[n*4+2] = ec ;
+		}
+		
 	}
 	T[n*4] = t_n+T[(n-1)*4];
+	
 	p1[0]=S ;
 	p1[1]=I ;
+	p1[2]=Iend ;
 	p2[0]=T ;
 	S=0;
 	I=0;
 	T=0;
+	Iend=0;
 	np[0] = n ;
+	Free(R) ;
+	Free(ST2) ;
 }
