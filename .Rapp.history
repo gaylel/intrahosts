@@ -1,0 +1,1083 @@
+edges
+tips2
+nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;
+nodes
+no_ch<-setdiff(nodes,edges[,1]) ;
+no_ch
+nodes
+nodes<-edges[match(nodes,edges[,2]),1] ;
+nodes
+nodes<-unique(nodes) ;#
+	m<-match(no_ch,edges[,2]) ;
+nodes
+m
+edges<-edges[-m,] ;#
+	el<-el[-m] ;#
+	edges
+nodes
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;
+nodes3<-nodes
+edges3<-edges
+edges3
+no_ch<-setdiff(nodes,edges[,1]) ;#
+	nodes<-edges[match(nodes,edges[,2]),1] ;#
+	nodes<-unique(nodes) ;#
+	m<-match(no_ch,edges[,2]) ;#
+	edges<-edges[-m,] ;#
+	el<-el[-m] ;#
+	edges
+no_ch<-setdiff(nodes,edges[,1]) ;#
+	nodes<-edges[match(nodes,edges[,2]),1] ;#
+	nodes<-unique(nodes) ;#
+	m<-match(no_ch,edges[,2]) ;#
+	edges<-edges[-m,] ;#
+	el<-el[-m] ;#
+	edges
+no_ch<-setdiff(nodes,edges[,1]) ;#
+	nodes<-edges[match(nodes,edges[,2]),1] ;#
+	nodes<-unique(nodes) ;#
+	m<-match(no_ch,edges[,2]) ;#
+	edges<-edges[-m,] ;#
+	el<-el[-m] ;#
+	edges
+edges<-edges3
+no_ch<-setdiff(nodes,edges[,1]) ;#
+	nodes<-edges[match(nodes,edges[,2]),1] ;#
+	nodes<-unique(nodes) ;#
+	m<-match(no_ch,edges[,2]) ;#
+	edges<-edges[-m,] ;#
+	el<-el[-m] ;#
+	edges
+nodes
+nodes<-nodes3
+no_ch<-setdiff(nodes,edges[,1]) ;#
+	nodes<-edges[match(nodes,edges[,2]),1] ;#
+	nodes<-unique(nodes) ;#
+	m<-match(no_ch,edges[,2]) ;#
+	edges<-edges[-m,] ;#
+	el<-el[-m] ;#
+	edges
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;
+nodes3<-nodes
+edges3<-edges
+no_ch<-setdiff(nodes,edges[,1]) ;#
+	nodes<-edges[match(nodes,edges[,2]),1] ;#
+	nodes<-unique(nodes) ;#
+	m<-match(no_ch,edges[,2]) ;#
+	edges<-edges[-m,] ;#
+	el<-el[-m] ;#
+	edges#
+	nodes
+edges3
+nodes which have no children#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+		# get parents#
+		nodes<-edges[match(nodes,edges[,2]),1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2]) ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes
+no_ch
+nodesnnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;
+nodes
+edges
+nodes which have no children#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+		# get parents#
+		nodes<-t$edge[match(nodes,t$edge[,2]),1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2]) ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes
+no_ch
+nodes which have no children#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+		# get parents#
+		nodes<-t$edge[match(nodes,t$edge[,2]),1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2]) ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes
+no_ch
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;
+no_ch<-setdiff(nodes,edges[,1]) ;#
+		# get parents#
+		nodes<-t$edge[match(nodes,t$edge[,2]),1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2]) ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes
+no_ch<-setdiff(nodes,edges[,1]) ;#
+		# get parents#
+		nodes<-t$edge[match(nodes,t$edge[,2]),1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2]) ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;
+nodes which have no children#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+		# get parents#
+		nodes<-t$edge[match(nodes,t$edge[,2]),1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2]) ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes
+no_ch<-setdiff(nodes,edges[,1]) ;
+no_ch
+match(nodes,t$edge[,2])
+nodes
+t$edge
+m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;
+m
+nodes<-t$edge[m,1] ;
+nodes
+nodes<-unique(nodes) ;
+nodes
+m<-match(no_ch,edges[,2]) ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes
+no_ch<-setdiff(nodes,edges[,1]) ;#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;#
+		nodes<-t$edge[m,1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2],nomatch=0) ;#
+		m<-m[m>0] ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes
+edges
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;
+no_ch<-setdiff(nodes,edges[,1]) ;#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;#
+		nodes<-t$edge[m,1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2],nomatch=0) ;#
+		m<-m[m>0] ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes
+no_ch<-setdiff(nodes,edges[,1]) ;#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;#
+		nodes<-t$edge[m,1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2],nomatch=0) ;#
+		m<-m[m>0] ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes
+no_ch<-setdiff(nodes,edges[,1]) ;#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);
+no_ch
+nodes
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;#
+	no_ch<-setdiff(nodes,edges[,1]) ;#
+	while (length(no_ch)>0)#
+	{#
+		# nodes which have no children#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;#
+		nodes<-t$edge[m,1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2],nomatch=0) ;#
+		m<-m[m>0] ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+	}
+edges
+nodes
+tips2
+collapse single nodes#
+	nc<-tabulate(edges[,1]) ;#
+	s<-which(nc==1) ;#
+	if (length(s)>0)#
+	{#
+	for (i in seq(1,length(s)))#
+	{#
+		ch_i<-match(s[i],edges[,1]) ;#
+		ch<-edges[ch_i,2] ;#
+		p_i<-match(s[i],edges[,2]) ;#
+		if (length(p_i)>0)#
+		{#
+			pa<-edges[p_i,1] ;#
+			edges[p_i,2]<-ch ;#
+			el[p_i]<-el[p_i]+el[ch_i] ;#
+			edges<-edges[-ch_i,] ;#
+			el<-el[-ch_i] ;#
+		}#
+	}#
+	}
+edges
+el
+tips2
+tabulate(edges[,1])
+tabulate(edges[,2])
+ntips2<-length(tips2) ;#
+	m<-match(tips2,edges[,2]) ;#
+	nodes2<-setdiff(c(edges[,1],edges[,2]),tips2) ;#
+	edges2<-edges ;#
+	for (i in seq(1,length(nodes2)))#
+	{#
+		m2<-which(edges==nodes2[i]) ;#
+		edges2[m2]<- i+ntips2;#
+	}
+edges2
+edges2[m,2]<-seq(1,ntips2) ;
+edges
+m
+edges2
+tiplabel2<-t$tip.label[tips2] ;#
+	Nnode2<-length(nodes2) ;#
+	t2<-list() ;#
+	t2$edge <- edges2 ;#
+	t2$Nnode<-Nnode2 ;#
+	#t2$node.label<-nodelabel2 ;#
+	t2$edge.length<-el ;#
+	#t2$tip.label<-tiplabel2 ;#
+	class(t2)<-"phylo" ;
+t2
+tiplabel2<-t$tip.label[tips2] ;
+tiplabel2
+t2$tip.label<-tiplabel2 ;
+t2
+plot.phylo(t2)
+dev.off()
+plot.phylo(t2)
+dev.off()
+par(mfrow=c(2,1))
+plot.phylo(t2)
+plot.phylo(t)
+dev.off()
+node.depth.edgelength(t2)
+node.depth.edgelength(t)
+d1<-node.depth.edgelength(t)
+d2<-node.depth.edgelength(t2)
+intersect(d1,d2)
+t2$edge.length
+t$edge.length
+T<-1
+t
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;#
+	no_ch<-setdiff(nodes,edges[,1]) ;#
+	while (length(no_ch)>0)#
+	{#
+		# nodes which have no children#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;#
+		nodes<-t$edge[m,1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2],nomatch=0) ;#
+		m<-m[m>0] ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+	}#
+	# collapse single nodes#
+	nc<-tabulate(edges[,1]) ;#
+	# single nodes#
+	s<-which(nc==1) ;#
+	if (length(s)>0)#
+	{#
+		for (i in seq(1,length(s)))#
+		{#
+			# get child of single node#
+			ch_i<-match(s[i],edges[,1]) ;#
+			ch<-edges[ch_i,2] ;#
+			# get parent of single node#
+			p_i<-match(s[i],edges[,2]) ;#
+			if (length(p_i)>0)#
+			{#
+				pa<-edges[p_i,1] ;#
+				# join two edges together#
+				edges[p_i,2]<-ch ;#
+				el[p_i]<-el[p_i]+el[ch_i] ;#
+				edges<-edges[-ch_i,] ;#
+				el<-el[-ch_i] ;#
+			}#
+		}#
+	}#
+	# relabel#
+	ntips2<-length(tips2) ;#
+	m<-match(tips2,edges[,2]) ;#
+	nodes2<-setdiff(c(edges[,1],edges[,2]),tips2) ;#
+	edges2<-edges ;#
+	for (i in seq(1,length(nodes2)))#
+	{#
+		m2<-which(edges==nodes2[i]) ;#
+		edges2[m2]<- i+ntips2;#
+	}#
+	edges2[m,2]<-seq(1,ntips2) ;#
+	#nodelabel2<-t$node.label[nodes2-ntips] ;#
+	tiplabel2<-t$tip.label[tips2] ;#
+	Nnode2<-length(nodes2) ;#
+	t2<-list() ;#
+	t2$edge <- edges2 ;#
+	t2$Nnode<-Nnode2 ;#
+	#t2$node.label<-nodelabel2 ;#
+	t2$edge.length<-el ;#
+	t2$tip.label<-tiplabel2 ;#
+	class(t2)<-"phylo" ;
+t2
+t2$edge.length
+t$edge
+t
+t[t[,1]==33,]
+t$edge[t$edge[,1]==33,]
+t$edge[t$edge[,1]==34,]
+which(t$edge[,1]==34)
+t$edge.length[50]
+t$edge.length[54]
+t2$edge.length
+dev.off()
+plot.phylo(t)
+t$edge.length[54]
+t$edge
+t<-reorder(t)
+t
+t$edge
+cbind(t$edge,t$edge.length)
+t
+dev.off()
+?plot.phylo
+plot.phylo(t)
+t2$edge.length
+sir
+T<-4
+t
+t$edge
+setdiff(t$edge[,1],t$edge[,2])
+t2
+t2$edge
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;#
+	no_ch<-setdiff(nodes,edges[,1]) ;#
+	while (length(no_ch)>0)#
+	{#
+		# nodes which have no children#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;#
+		nodes<-t$edge[m,1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2],nomatch=0) ;#
+		m<-m[m>0] ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+	}
+T<-1
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;#
+	no_ch<-setdiff(nodes,edges[,1]) ;#
+	while (length(no_ch)>0)#
+	{#
+		# nodes which have no children#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;#
+		nodes<-t$edge[m,1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2],nomatch=0) ;#
+		m<-m[m>0] ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+	}
+edges
+t$edge[1:10,]
+t$edge[1:100,]
+t$edge[,]
+t$edge.length
+el
+t$edge.length[58]
+el
+collapse single nodes#
+	nc<-tabulate(edges[,1]) ;#
+	# single nodes#
+	s<-which(nc==1) ;#
+	if (length(s)>0)#
+	{#
+		for (i in seq(1,length(s)))#
+		{#
+			# get child of single node#
+			ch_i<-match(s[i],edges[,1]) ;#
+			ch<-edges[ch_i,2] ;#
+			# get parent of single node#
+			p_i<-match(s[i],edges[,2]) ;#
+			if (length(p_i)>0)#
+			{#
+				pa<-edges[p_i,1] ;#
+				# join two edges together#
+				edges[p_i,2]<-ch ;#
+				el[p_i]<-el[p_i]+el[ch_i] ;#
+				edges<-edges[-ch_i,] ;#
+				el<-el[-ch_i] ;#
+			}#
+		}#
+	}
+el
+edges
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;#
+	no_ch<-setdiff(nodes,edges[,1]) ;#
+	while (length(no_ch)>0)#
+	{#
+		# nodes which have no children#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;#
+		nodes<-t$edge[m,1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2],nomatch=0) ;#
+		m<-m[m>0] ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+	}
+edges
+el
+collapse single nodes#
+	nc<-tabulate(edges[,1]) ;#
+	# single nodes#
+	s<-which(nc==1) ;#
+	if (length(s)>0)#
+	{#
+		for (i in seq(1,length(s)))#
+		{#
+			# get child of single node#
+			ch_i<-match(s[i],edges[,1]) ;#
+			ch<-edges[ch_i,2] ;#
+			# get parent of single node#
+			p_i<-match(s[i],edges[,2]) ;#
+			if (length(p_i)>0)#
+			{#
+				pa<-edges[p_i,1] ;#
+				# join two edges together#
+				edges[p_i,2]<-ch ;#
+				el[p_i]<-el[p_i]+el[ch_i] ;#
+				edges<-edges[-ch_i,] ;#
+				el<-el[-ch_i] ;#
+			}#
+			else#
+			{#
+				# get grandchildren#
+				gc_i<-match(ch,edges[,1]) ;#
+				gc<-edges[gc_i,2] ;#
+				edges[gc_i,1]<-s[i] ;#
+				el[gc_i]<-el[gc_i]+el[ch_i] ;#
+				edges<-edges[-ch_i,] ;#
+				el<-el[-ch_i] ;#
+			}#
+		}#
+	}
+edges
+el
+p_i
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;#
+	no_ch<-setdiff(nodes,edges[,1]) ;#
+	while (length(no_ch)>0)#
+	{#
+		# nodes which have no children#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;#
+		nodes<-t$edge[m,1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2],nomatch=0) ;#
+		m<-m[m>0] ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+	}
+edges
+el
+collapse single nodes#
+	nc<-tabulate(edges[,1]) ;#
+	# single nodes#
+	s<-which(nc==1) ;#
+	if (length(s)>0)#
+	{#
+		for (i in seq(1,length(s)))#
+		{#
+			# get child of single node#
+			ch_i<-match(s[i],edges[,1]) ;#
+			ch<-edges[ch_i,2] ;#
+			# get parent of single node#
+			p_i<-match(s[i],edges[,2],nomatch=0) ;#
+			if (p_i>0)#
+			{#
+				pa<-edges[p_i,1] ;#
+				# join two edges together#
+				edges[p_i,2]<-ch ;#
+				el[p_i]<-el[p_i]+el[ch_i] ;#
+				edges<-edges[-ch_i,] ;#
+				el<-el[-ch_i] ;#
+			}#
+			else#
+			{#
+				# get grandchildren#
+				gc_i<-match(ch,edges[,1]) ;#
+				gc<-edges[gc_i,2] ;#
+				edges[gc_i,1]<-s[i] ;#
+				el[gc_i]<-el[gc_i]+el[ch_i] ;#
+				edges<-edges[-ch_i,] ;#
+				el<-el[-ch_i] ;#
+			}#
+		}#
+	}
+el
+edges
+nnode<-t$Nnode ;#
+	ntips<-length(t$tip.label) ;#
+	d<-node.depth.edgelength(t) ;#
+	dtips<-d[1:ntips] ;#
+	dnodes<-d[ntips+1:(ntips+nnode)] ;	#
+	stips<-which(dtips>=T) ;#
+	# look for edges spanning the cutoff#
+	e<-cbind(d[t$edge[,1]],d[t$edge[,2]]) ;#
+	# new tips#
+	sp<-intersect(which(e[,1]<T),which(e[,2]>T)) ;#
+	tips2<-t$edge[sp,2] ;#
+	edges<-t$edge ;#
+	pr<-unique(c(which(d[edges[,2]]<T),sp)) ;#
+	edges<-edges[pr,] ;#
+	el<-t$edge.length[pr] ;#
+	nodes<-setdiff(edges[,2],tips2) ;#
+	nodes<-c(nodes,t$edge[sp,1]) ;#
+	nodes<-unique(nodes) ;#
+	no_ch<-setdiff(nodes,edges[,1]) ;#
+	while (length(no_ch)>0)#
+	{#
+		# nodes which have no children#
+		# get parents#
+		m<-match(nodes,t$edge[,2],nomatch=0);#
+		m<-m[m>0] ;#
+		nodes<-t$edge[m,1] ;#
+		nodes<-unique(nodes) ;#
+		# delete childless nodes#
+		m<-match(no_ch,edges[,2],nomatch=0) ;#
+		m<-m[m>0] ;#
+		edges<-edges[-m,] ;#
+		el<-el[-m] ;#
+		edges#
+		nodes#
+		no_ch<-setdiff(nodes,edges[,1]) ;#
+	}
+collapse single nodes#
+	nc<-tabulate(edges[,1]) ;#
+	# single nodes#
+	s<-which(nc==1) ;#
+	if (length(s)>0)#
+	{#
+		for (i in seq(1,length(s)))#
+		{#
+			# get child of single node#
+			ch_i<-match(s[i],edges[,1]) ;#
+			ch<-edges[ch_i,2] ;#
+			# get parent of single node#
+			p_i<-match(s[i],edges[,2],nomatch=0) ;#
+			if (p_i>0)#
+			{#
+				pa<-edges[p_i,1] ;#
+				# join two edges together#
+				edges[p_i,2]<-ch ;#
+				el[p_i]<-el[p_i]+el[ch_i] ;#
+				edges<-edges[-ch_i,] ;#
+				el<-el[-ch_i] ;#
+			}#
+			else#
+			{#
+				# get grandchildren#
+				gc_i<-which(edges[,1]==ch) ;#
+				gc<-edges[gc_i,2] ;#
+				edges[gc_i,1]<-s[i] ;#
+				el[gc_i]<-el[gc_i]+el[ch_i] ;#
+				edges<-edges[-ch_i,] ;#
+				el<-el[-ch_i] ;#
+			}#
+		}#
+	}
+edges
+el
+el
+t$edge.length
+t$edge
+t$edge.length[58]
+T<-3
+source("cSIR.R")
+cSIR_prunetree
+t2<-cSIR_prunetree(t=t,T=3)
+t2
+dev.off()
+par(mfrow=c(1,2))
+plot.phylo(t2)
+plot.phylo(t)
+dev.off()
+par(mfrow=c(2,1))
+plot.phylo(t)
+plot.phylo(t2)
+t2<-cSIR_prunetree(t=t,T=2.5)
+par(mfrow=c(2,1))
+plot.phylo(t)
+plot.phylo(t2)
+dev.off()
+sir<-cSIR_multi(nHosts=1,nS=5)
+sir
+sir<-cSIR_multi(nHosts=1,nS=5)
+sir
+sir
+sir<-cSIR_multi(nHosts=1,nS=5)
+sir
+t<-cSIR_tree_sample2(sir=sir,N=5)
+t
+t<-collapse.singles(t) ;
+plot.phylo(t)
+t2<-cSIR_prunetree(t=t,T=2)
+plot.phylo(t2)
+par(mfrow=c(2,1))
+plot.phylo(t)
+plot.phylo(t2)
+sir<-cSIR_multi(nHosts=1,nS=10)
+t<-cSIR_tree_sample2(sir=sir,N=10)
+t<-collapse.singles(t) ;
+t
+sir<-cSIR_multi(nHosts=1,nS=10)
+sir
+t<-cSIR_tree_sample2(sir=sir,N=10)
+t
+t<-collapse.singles(t) ;
+plot.phylo(t)
+sir<-cSIR_multi(nHosts=1,nS=100)
+t<-cSIR_tree_sample2(sir=sir,N=100)
+plot.phylo(t)
+sir<-cSIR_multi(nHosts=1,nS=100)
+sir
+t<-cSIR_tree_sample2(sir=sir,N=100)
+plot.phylo(t)
+t<-collapse.singles(t) ;
+plot.phylo(t)
+sir<-cSIR_multi(nHosts=1,nS=1000)
+t<-cSIR_tree_sample2(sir=sir,N=1000)
+plot.phylo(t)
+sir<-cSIR_multi(nHosts=1,nS=1000)
+t<-cSIR_tree_sample2(sir=sir,N=1000)
+plot.phylo(t)
+t<-collapse.singles(t) ;
+plot.phylo(t)
+t
+t<-cSIR_tree_sample2(sir=sir,N=1000)
+sir<-cSIR_multi(nHosts=1,nS=1000)
+sir
+cSIR_tmx
+tms<-cSIR_tmx()
+tmx<-cSIR_tmx()
+tmx<-cSIR_tmx(nS=5)
+tmx<-cSIR_tmx(nS=10)
+c1
+construct the transition matrix#
+	nstates<-(nS+1)*(nS+2)/2#
+	#nstates<-(nS*(nS+1))/2 ;#
+	T<-matrix(0,nrow=nstates,ncol=nstates) ;#
+	for (i in seq(1,nS))#
+	{#
+		T[i,i]<-1;#
+	} #
+	c1<-c(nS,2*nS -1) ;#
+	r1<-c(0,nS) ;#
+	r2<-c(2*nS-1, 2*nS-1 + nS-2);#
+	for (i in seq(nS,2,by=-1))#
+	{#
+		c1[1]<-c1[1]+1 ;#
+		r1[1]<-r1[1]+1 ;#
+		r2[1]<-r2[1]+1 ;#
+		A<-matrix(0,nrow=i,ncol=i-1) ;#
+		B<-matrix(0,nrow=i-2,ncol=i-1) ;#
+		if (i-2 >=1)#
+		{#
+		for (j in seq(i-2,1,by=-1))#
+		{#
+			p<-cSIR_p_recover(nS=nS,br=br,dr=dr,s=j) ;#
+			A[i-j,i-1-j]<-p ;#
+			B[i-j-1,i-j-1] <-(1-p) ;	#
+		}#
+		}#
+		A[i,i-1]<-cSIR_p_recover(nS=nS,br=br,dr=dr,s=0) ;#
+		if (r1[2] <=nstates && c1[2]<=nstates)#
+		{#
+			T[r1[1]:r1[2],c1[1]:c1[2]]<-A ;#
+		}#
+		if (r2[1] <=nstates )#
+		{#
+			T[r2[1]:r2[2],c1[1]:c1[2]]<-B ;#
+		}#
+		r1[1]<-r1[2] ;#
+		r2[1]<-r2[2] ;#
+		c1[1]<-c1[2] ;#
+		r1[2]<-r1[2]+i-1 ;#
+		r2[2]<-r2[2]+i-3 ;#
+		c1[2]<-c1[2]+i-2 ;
+}
+nS<-5
+construct the transition matrix#
+	nstates<-(nS+1)*(nS+2)/2#
+	#nstates<-(nS*(nS+1))/2 ;#
+	T<-matrix(0,nrow=nstates,ncol=nstates) ;#
+	for (i in seq(1,nS))#
+	{#
+		T[i,i]<-1;#
+	} #
+	c1<-c(nS,2*nS -1) ;#
+	r1<-c(0,nS) ;#
+	r2<-c(2*nS-1, 2*nS-1 + nS-2);#
+	for (i in seq(nS,2,by=-1))#
+	{#
+		c1[1]<-c1[1]+1 ;#
+		r1[1]<-r1[1]+1 ;#
+		r2[1]<-r2[1]+1 ;#
+		A<-matrix(0,nrow=i,ncol=i-1) ;#
+		B<-matrix(0,nrow=i-2,ncol=i-1) ;#
+		if (i-2 >=1)#
+		{#
+		for (j in seq(i-2,1,by=-1))#
+		{#
+			p<-cSIR_p_recover(nS=nS,br=br,dr=dr,s=j) ;#
+			A[i-j,i-1-j]<-p ;#
+			B[i-j-1,i-j-1] <-(1-p) ;	#
+		}#
+		}#
+		A[i,i-1]<-cSIR_p_recover(nS=nS,br=br,dr=dr,s=0) ;#
+		if (r1[2] <=nstates && c1[2]<=nstates)#
+		{#
+			T[r1[1]:r1[2],c1[1]:c1[2]]<-A ;#
+		}#
+		if (r2[1] <=nstates )#
+		{#
+			T[r2[1]:r2[2],c1[1]:c1[2]]<-B ;#
+		}#
+		r1[1]<-r1[2] ;#
+		r2[1]<-r2[2] ;#
+		c1[1]<-c1[2] ;#
+		r1[2]<-r1[2]+i-1 ;#
+		r2[2]<-r2[2]+i-3 ;#
+		c1[2]<-c1[2]+i-2 ;#
+}
+dr=1
+br=2
+construct the transition matrix#
+	nstates<-(nS+1)*(nS+2)/2#
+	#nstates<-(nS*(nS+1))/2 ;#
+	T<-matrix(0,nrow=nstates,ncol=nstates) ;#
+	for (i in seq(1,nS))#
+	{#
+		T[i,i]<-1;#
+	} #
+	c1<-c(nS,2*nS -1) ;#
+	r1<-c(0,nS) ;#
+	r2<-c(2*nS-1, 2*nS-1 + nS-2);#
+	for (i in seq(nS,2,by=-1))#
+	{#
+		c1[1]<-c1[1]+1 ;#
+		r1[1]<-r1[1]+1 ;#
+		r2[1]<-r2[1]+1 ;#
+		A<-matrix(0,nrow=i,ncol=i-1) ;#
+		B<-matrix(0,nrow=i-2,ncol=i-1) ;#
+		if (i-2 >=1)#
+		{#
+		for (j in seq(i-2,1,by=-1))#
+		{#
+			p<-cSIR_p_recover(nS=nS,br=br,dr=dr,s=j) ;#
+			A[i-j,i-1-j]<-p ;#
+			B[i-j-1,i-j-1] <-(1-p) ;	#
+		}#
+		}#
+		A[i,i-1]<-cSIR_p_recover(nS=nS,br=br,dr=dr,s=0) ;#
+		if (r1[2] <=nstates && c1[2]<=nstates)#
+		{#
+			T[r1[1]:r1[2],c1[1]:c1[2]]<-A ;#
+		}#
+		if (r2[1] <=nstates )#
+		{#
+			T[r2[1]:r2[2],c1[1]:c1[2]]<-B ;#
+		}#
+		r1[1]<-r1[2] ;#
+		r2[1]<-r2[2] ;#
+		c1[1]<-c1[2] ;#
+		r1[2]<-r1[2]+i-1 ;#
+		r2[2]<-r2[2]+i-3 ;#
+		c1[2]<-c1[2]+i-2 ;#
+}

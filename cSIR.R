@@ -134,8 +134,6 @@ cSIR_Keval<-function(sir,SN,h)
 	return(p) ;
 }
 
-
-
 cSIR_tree_sample<-function(sir,N=100)
 {
 	I<-sir[[1]];
@@ -632,8 +630,7 @@ cSIRtree_reconstruct<-function(sir,N=100,SN,ST)
 	tr$node.label<-rev(tr$node.label) ;
 	tr$tip.label<-tlab ;
 	class(tr)<-"phylo" ;
-	T<-cSIR_treeparams()
-	
+		
 	return(tr) ;
 }
 
@@ -985,9 +982,16 @@ cSIR_Bproposal<-function(oldB)
 
 cSIR_drproposal<-function(olddr)
 {
-	dr<-exp(log(olddr)+rnorm(1,0,1)) ;
+	dr<-exp(log(olddr)+rnorm(1,0,0.1)) ;
 	return(dr) ;
 }
+
+cSIR_mrproposal<-function(oldmr)
+{
+	mr<-exp(log(oldmr)+rnorm(1,0,0.1)) ;
+	return(mr) ;
+}
+
 
 cSIR_Bdrprior<-function(B,Bcon,dr,l1,l2,l3) 
 {
@@ -1036,12 +1040,14 @@ cSIR_Bstruct<-function(ST)
 	return(Bcon) ;
 }
 
-cSIR_SB_metrop<-function(nHosts=2,I0=1,nS=100,dr=1,ST=c(1,1),SN=c(30,30),N=1000)
+cSIR_SB_metrop<-function(nHosts=2,I0=1,nS=100,dr=1,dat,x, N=1000)
 {
 	
 	# initialise the parameters
 	dr=0.1 ;
 	B<-matrix(0.001*runif(nHosts*nHosts),nrow=nHosts,ncol=nHosts) ;
+	SN<-dat$SN ;
+	ST<-dat$ST ;
 	for (i in seq(1,nHosts))
 	{
 		B[i,i]=1 ;
@@ -1059,7 +1065,20 @@ cSIR_SB_metrop<-function(nHosts=2,I0=1,nS=100,dr=1,ST=c(1,1),SN=c(30,30),N=1000)
 	drchain<-list() ;
 	sirchain<-list() ;
 	trchain<-list() ;
+	llchain<-list() ;
 	pold<-cSIR_Bdrprior(B,Bcon,dr,l1,l2,l3)  ;
+	
+	# initialise branching order and leaf order here.
+	s<-(sum(SN)-1):1 ;
+	lo<- NULL ;
+	for (i in seq(1,nHosts))
+	{
+		lo<-c(lo,rep(i,SN[i])) ;
+		
+	}
+	lo<-rbind(seq(1,sum(SN)),lo) ;
+		
+	llcur<- log(0) ;
 	while (Nacc<N)
 	{
 		# make new proposal
@@ -1076,19 +1095,41 @@ cSIR_SB_metrop<-function(nHosts=2,I0=1,nS=100,dr=1,ST=c(1,1),SN=c(30,30),N=1000)
 			
 			if (runif(1)<=h)
 			{
-			Nacc<-Nacc+1 ;
-			iend<-rbind(iend,sir$Iend) ;
-			drchain[[Nacc]]<-newdr ;
-			Bchain[[Nacc]]<-newB ;
-			sirchain[[Nacc]]<-sir ;
-			dr<-newdr ;
-			B<-newB ;
-			pold<-cSIR_Bdrprior(B,Bcon,dr,l1,l2,l3)  ;
-			print(sir$Iend) ;
+				# sample phylogeny and calculate likelihood
+				tr<-cSIR_phylosample(sir=sir,nS=nS,lo=lo,s=s,dat)
+				ll<-pml(tr$tr,x)
+				
+				pacc=(min(exp(ll$logLik-llcur),1)) ;
+				print("pacc")
+				print(pacc)
+				
+				print(llcur)
+				print(ll)
+				if (runif(1)<=pacc)
+				{
+				Nacc<-Nacc+1 ;
+						
+				lo<-tr$lo ;
+				s<- tr$s ;
+				trchain[[Nacc]]<-tr$tr ;
+				llchain[[Nacc]]<-ll$logLik ;
+				print(ll$logLik)
+				llcur<-ll$logLik ;
+				iend<-rbind(iend,sir$Iend) ;
+				drchain[[Nacc]]<-newdr ;
+				Bchain[[Nacc]]<-newB ;
+				sirchain[[Nacc]]<-sir ;
+				dr<-newdr ;
+				B<-newB ;
+				pold<-cSIR_Bdrprior(B,Bcon,dr,l1,l2,l3)  ;
+				print(sir$Iend) ;
 		
-			print("accept")
-			tr<-cSIRtree_reconstruct(sir,N=nS,SN=SN,ST=ST) ;
-			trchain[[Nacc]]<-tr ;
+					print("accept")
+				}
+				else
+				{Nrej<-Nrej+1}
+			
+			
 			}
 		}
 		else
@@ -1101,10 +1142,67 @@ cSIR_SB_metrop<-function(nHosts=2,I0=1,nS=100,dr=1,ST=c(1,1),SN=c(30,30),N=1000)
 	
 }
 
-cSIR_phylosample(sir,N,SN,ST)
+cSIR_phylosample<-function(sir,nS,lo,s,dat)
 {
-	tr<-cSIRtree_reconstruct(sir,N=nS,SN=SN,ST=ST) ;
-	cSIR_treeparams(tr
+	tr<-cSIRtree_reconstruct(sir,N=nS,SN=dat$SN,ST=dat$ST) ;
+	Tp<-cSIR_treeparams(tr,SN=dat$SN,ST=dat$ST) ;
+	
+	
+	# get new branching order based on current and leaf order
+	bt<-cSIR_stimes(T=Tp$T,lo=lo,s=s) ;
+	
+	print(bt$s)
+	
+	tr2<-cSIR_phylofroms(s=bt$s,lo=bt$lo, T=Tp$T, dat=dat) ;
+	return(list(tr=tr2,s=bt$s, lo=bt$lo)) ;
+	
+}
+
+cSIR_phylofroms<-function(s,lo,T,dat)
+{
+		Nnode<-nrow(T) ;
+		NHosts<-length(dat$SN) ;
+		ntips<-Nnode+1 ;
+		Inode<-2*ntips -1 ;
+		lo2<-lo[1,] ;
+		# vector of node times
+		t<-NULL ;
+		for (i in seq(1,NHosts))
+		{
+			t<-c(t,rep(dat$ST[i],dat$SN[i]));
+			
+		}
+		t<-c(t,(T[,1])) ;
+		
+		edge<-NULL ;
+		el <- NULL ;
+		for (i in seq(Nnode,1))
+		{
+			s1<-s[Nnode+1-i] ;
+			s2<-s1+1 ;
+			edge<-rbind(c(Inode,lo2[s2]),edge) ;
+			edge<-rbind(c(Inode,lo2[s1]),edge) ;	
+			j<-which(lo2==lo2[s2]);
+			k<-which(lo2==lo2[s1]);
+			el<-c(t[lo2[s1]]-t[Inode], t[lo2[s2]]-t[Inode],el)
+			lo2[j]<-Inode ;
+			lo2[k]<-Inode ;
+			Inode<-Inode-1 ;
+			#print(edge)
+			
+		}
+		tr<-list() ;
+		tr$Nnode<-Nnode ;
+		tr$edge <- edge ;
+		tr$edge.length <- el ;
+		tr$node.label <- as.character(T[,2]) ;
+		tr$tip.label <- NULL ;
+		for (i in seq(1,NHosts))
+		{
+			tr$tip.label<-c(tr$tip.label,dat$info[[i]]$key) ;
+		}
+		class(tr)<-"phylo" ;
+		return(tr) ;
 }
 
 cSIR_SB_abcmetrop<-function(nHosts=2,I0=1,nS=100,dr=1,ST=c(1,1),SN=c(30,30),N=1000)
@@ -1499,9 +1597,8 @@ cSIR_treeparams<-function(tre,SN,ST)
 	#		s[mlo1]<-i ;
 	#	}
 	#	lo2[lo_1]<-i ;
-	#	lo2[lo_2]<-i ;
-			
-	}
+	#	lo2[lo_2]<-i ;		
+	#}
 	
 	
 	#return(list(T=T,mn=migNodes,s=s,lo=lo)) ;
@@ -1581,8 +1678,7 @@ cSIR_stimes<-function(T,lo,s)
 	snew<-NULL ;
 	for (i in seq(N,1))
 	{
-	
-	   
+
 		ha<-T[i,3] ;
 		hb<-T[i,4] ;
 		j<-which((bh[1,]==ha & bh[2,]==hb) |  (bh[1,]==hb & bh[2,]==ha)) ;
@@ -1615,10 +1711,18 @@ cSIR_stimes<-function(T,lo,s)
 			lb<-which(ho==ha) ;
 			rb<-which(ho==hb) ;
 			
-			
-			lbi<-ifelse(length(lb)>1,sample(lb),lb) ;
-			rbi<-ifelse(length(rb)>1,sample(rb),rb) ;
-			
+			if (ha!=hb)
+			{
+				lbi<-ifelse(length(lb)>1,sample(lb),lb) ;
+				rbi<-ifelse(length(rb)>1,sample(rb),rb) ;
+			}
+			else
+			{
+				lbi<-ifelse(length(lb)>1,sample(lb),lb) ;
+				lbt<-setdiff(lb,lbi) ;
+				rbi<-ifelse(length(lbt)>1,sample(lbt),lbt) ;
+				
+			}
 			lbv<-hh[1,hu[lbi]] ;
 			rbv<-hh[1,hu[rbi]] ;
 			
@@ -1635,13 +1739,10 @@ cSIR_stimes<-function(T,lo,s)
 				hri<-tmp ;
 			}
 			
+
 			seg1<-(max(hli)+1):(min(hri)-1) ;
 			lo_o1<-lo[1,hri] ;
 			lo_o2<-lo[1,seg1];
-			li1<-(bh[3,] %in% lo_o1[1:(length(lo_o1)-1)] ) ;
-			li2<-(bh[3,] %in% lo_o2[1:(length(lo_o2)-1)]) ;
-			
-			
 			# update leaf ordering
 			if (max(hri)<ntips)
 			{
@@ -1654,22 +1755,28 @@ cSIR_stimes<-function(T,lo,s)
 				h<-c(h[-seg1],h[seg1]) ;
 				lo<-cbind(lo[,-seg1],lo[,seg1]) ;
 			}
-			
+
 			# get breakpoints
 			bp<-array() ;
 			bp[1]<-max(hli) ;
 			bp[2]<-bp[1]+length(hri) ;
 			bp[3]<-bp[2]+length(seg1) ;
 			
-			li1<-(bh[3,] %in% lo_o1 ) ;
-			li2<-(bh[3,] %in% lo_o2) ;
+			#li1<-(bh[3,] %in% lo_o1 ) ;
+			#li2<-(bh[3,] %in% lo_o2) ;
+			li1<-(bh[3,] %in% hri ) ;
+			li2<-(bh[3,] %in% seg1) ;
 			bh[3,li2]<-bh[3,li2]+length(hri) ;
 			bh[3,li1]<-bh[3,li1]-length(seg1) ;
+		
 			
-			li1<-(snew %in% lo_o1) ;
-			li2<-(snew %in% lo_o2) ;
+			#li1<-(snew %in% lo_o1) ;
+			#li2<-(snew %in% lo_o2) ;
+			li1<-(snew %in% hri) ;
+			li2<-(snew %in% seg1) ;
 			snew[li2]<-snew[li2]+length(hri) ;
 			snew[li1]<-snew[li1]-length(seg1) ;
+		
 			
 			# update bh at the breakpoints.
 			
@@ -1686,12 +1793,16 @@ cSIR_stimes<-function(T,lo,s)
 				{
 					bh[1,bpi]<-lo[2,bp[j]] ;
 					bh[2,bpi]<-lo[2,bp[j]+1] ;
+					bh[1,bpi]<-hh[2,h[bp[j]]] ;
+					bh[2,bpi]<-hh[2,h[bp[j]+1]] ;
+				
 					
 				}
 				else{
 					bh<-bh[,-bpi] ;
 				}
 			}
+	
 			
 			j<-which((bh[1,]==ha & bh[2,]==hb) |  (bh[1,]==hb & bh[2,]==ha)) ;
 			
@@ -1709,5 +1820,5 @@ cSIR_stimes<-function(T,lo,s)
 			bh<-matrix(bh[,-e],nrow=3) ;
 		}
 	}	
-	return(list(bh=bh,s=snew,lo=lo)) ;
+	return(list(s=snew,lo=lo)) ;
 }
