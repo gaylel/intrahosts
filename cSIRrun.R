@@ -14,9 +14,9 @@ load(file=paste(datadir,"/seqs.RData",sep="")) ;
 #dat$ST<-dat$ST[1] ;
 #dat$info[[1]]$key<-dat$info[[1]]$key[1:10] ;
 
-dat$SN<-dat$SN[1:2] ;
-dat$ST<-dat$ST[1:2] ;
-dat$info<-dat$info[1:2] ;
+dat$SN<-dat$SN[1:20] ;
+dat$ST<-dat$ST[1:20] ;
+dat$info<-dat$info[1:20] ;
 #dat$info<-dat$info[[1]] ;
 
 NHosts<-length(dat$SN) ;
@@ -29,7 +29,8 @@ NHosts<-length(dat$SN) ;
 # calculate UPGMA tree for each within-host population
 
 
-smp<-cSIR_SB_metrop(nHosts=NHosts,I0=1,nS=1000,dr=1,dat=dat,x=seqs,N=10000)
+system.time(smp<-cSIR_SB_metrop2(nHosts=NHosts,I0=1,nS=1000,dr=1,dat=dat,x=seqs,N=20))
 save(smp,file=paste(outdir,"/out.mcmc",sep="")) ;
+warnings()
 q()
 

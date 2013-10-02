@@ -62,3 +62,45 @@ cSIR_loaddata<-function(fname,datadir)
 	save(dat,file=paste(datadir,"/dat.RData",sep="")) ;
 	save(seqs,file=paste(datadir,"/seqs.RData",sep="")) ;
 }
+
+cSIR_testtree<-function(datadir)
+{
+	
+	source("cSIRsim.R")
+	
+	res<-cSIRsim()
+	tre<-res$tre
+	rootname<-"test"
+	save(tre,file=paste(datadir,"/",rootname,".params",sep=""))
+	tre$tr$node.label<-NULL
+	write.tree(tre$tr, file=paste(datadir,"/",rootname,".nwk",sep=""))
+	# write out metadata
+	dat<-res$dat
+	save(dat,file=paste(datadir,"/dat.RData",sep="")) ;
+}
+
+dnaBINmxtolist<-function(datadir)
+{
+	
+	# converts seqs into correct format
+	seqs<-read.dna(as.character=TRUE, paste(datadir,"/test.dat",sep=""))
+	load(paste(datadir,"/dat.RData",sep=""))
+	lab<-rownames(seqs)
+	rownames(seqs)<-NULL
+	m<-1
+	dn<-vector("list",sum(dat$SN))
+	for (i in seq(1,length(dat$info)))
+	{
+		j<-match(dat$info[[i]]$key,lab)
+		for (k in j)
+		{
+			dn[[k]]<-seqs[k,]
+			
+			m<-m+1
+		}
+		names(dn)[j]<-dat$info[[i]]$key
+		
+	}
+	dn<-as.DNAbin(dn)
+	return(dn)
+}
