@@ -32,7 +32,11 @@ NHosts<-length(dat$SN) ;
 # calculate UPGMA tree for each within-host population
 
 
+<<<<<<< HEAD
 system.time(smp<-cSIR_SB_metrop2(nHosts=NHosts,I0=1,nS=1000,dr=1,dat=dat,x=seqs,N=50000))
+=======
+system.time(smp<-cSIR_SB_metrop2(nHosts=NHosts,I0=1,nS=1000,dr=1,dat=dat,x=seqs,N=200000))
+>>>>>>> 9efa3e2269dea9d8828b5ae1f850e3feb146b714
 save(smp,file=paste(outdir,"/out.mcmc",sep="")) ;
 warnings()
 q()

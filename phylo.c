@@ -24,8 +24,11 @@ phylo* phylo_create(int ntips)
 	return tr ;
 }
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 9efa3e2269dea9d8828b5ae1f850e3feb146b714
 double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)
 {
 	// returning branching times for a phylo structure where the edges are ordered by intNode indices
