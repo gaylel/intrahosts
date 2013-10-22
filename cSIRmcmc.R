@@ -1,30 +1,111 @@
 mcmc_loadsmps<-function(resdir)
 {
-	library("mcmc")
+	
+	# load variable smp
 	load(paste(resdir,"/out.mcmc",sep=""))
-<<<<<<< HEAD
+
 	mr<-smp$mr
 	mr<-as.vector(unlist(mr))
 	
 	NHosts<-ncol(smp$B[[1]])
-	
-	
-=======
 	return(smp)
->>>>>>> 9efa3e2269dea9d8828b5ae1f850e3feb146b714
 }
 
-mcmc_convert<-function(ch)
+mcmc_loadsmp<-function(resdir,var)
 {
-	mcmc_ch<-mcmc(ch)
+	# when smps are stored individually
+	
+	vn<-list()
+	switch(var,
+	"B"={
+		load(paste(resdir,"/",var,".mcmc",sep=""))
+		smp<-eval(parse(text=var))
+		NHosts<-ncol(smp[[1]])
+		smp<-t(matrix(unlist(smp),nrow=NHosts*NHosts))
+		
+		k=1
+		for (i in seq(1,NHosts))
+		{
+			for (j in seq(1,NHosts))
+			{
+				vn[[k]]<-paste("B_",j,",",i,sep="")
+				k<-k+1
+			}
+		}
+		smp<-mcmc_convert(smp)
+	},
+	"tr"={
+		library("ape")
+		load(paste(resdir,"/",var,".mcmc",sep=""))
+		smp<-eval(parse(text=var))
+		#mcmc_writetrees(smp, resdir)	
+		#tr<-read.nexus(paste(resdir,"/out.trees",sep=""))
+		tr<-smp
+		#smp<-matrix(0,ncol=length(tr[[1]]$tip.label)-1,nrow=length(tr)/100)
+		smp<-NULL
+		for (i in seq(1,length(tr),by=100))
+		{
+			#smp[i,]<-tr[[i]]$edge.length[order(tr[[i]]$edge[,1])]
+			#smp[i,]<-branching.times(tr[[i]])
+			smp<-rbind(smp,branching.times(tr[[i]]))
+			#print(smp)
+		}
+		
+		for (i in seq(1,ncol(smp)))
+		{
+			vn[[i]]<-paste("bt_",i,sep="")
+
+		}	
+		
+		smp<-mcmc_convert(smp,100)
+		#smp<-mcmc_convert(smp)
+	},
+	{
+		load(paste(resdir,"/",var,".mcmc",sep=""))
+		smp<-eval(parse(text=var))
+		smp<-matrix(unlist(smp),ncol=1)
+		vn[[1]]<-var
+		smp<-mcmc_convert(smp)
+	}
+	)
+	
+	
+	varnames(smp)<-vn 
+	#smp<-mcmc_process(smp,1000,100)
+	#smp<-mcmc_process(smp,3000,1)
+	smp<-mcmc_process(smp,0,1)
+	return(smp)
+}
+
+mcmc_convert<-function(ch,thin=1)
+{
+	mcmc_ch<-mcmc(ch,thin=thin)
+	
 	return(mcmc_ch)
 }
 
-<<<<<<< HEAD
+mcmc_process<-function(ch,burnin,thin)
+{
+	smp<-window(x=ch,thin=thin,start=burnin+1)
+	return(smp)
+}
+
+mcmc_tredgelengths<-function(tr)
+{
+	
+
+}
+
 mcmc_stats<-function()
 {
 
-=======
+}
+
+mcmc_trace<-function(param)
+{
+
+}
+
 mcmc_trace<-function(smp,param,i,j)
 {
     ch<-smp[[param]]
@@ -38,16 +119,13 @@ mcmc_trace<-function(smp,param,i,j)
     }
     #ch<-mcmc_convert(ch)
     return(ch)  
->>>>>>> 9efa3e2269dea9d8828b5ae1f850e3feb146b714
 }
 
 mcmc_getBij<-function(i,j,B,NHosts)
 {
-<<<<<<< HEAD
 	k<-(j-1)*NHosts + i
 	NHosts2=NHosts*NHosts
 	b<-(unlist(B))[seq(k,NHosts2*length(B),by=NHosts2)]	
-	b<-mcmc(b)
 	return(b)
 }
 
@@ -58,25 +136,3 @@ mcmc_writetrees<-function(trees, resdir)
 	write.nexus(trees,file=paste(resdir,"/out.trees",sep=""))
 }
 
-=======
-  k<-(j-1)*NHosts + i
-  NHosts2=NHosts*NHosts
-  b<-as.vector(unlist(B))[seq(k,length(B),by=NHosts2)]
-  return(b)
-}
-
-mcmc_writetrees<-function(trees,resdir)
-{
-  lab<-paste("STATE",seq(1:length(trees))-1,sep="_")
-  names(trees)<-lab
-  write.nexus(trees,file=paste(resdir,"/out.trees",sep=""))
-}
-
-
-
-
-
-
-
-
->>>>>>> 9efa3e2269dea9d8828b5ae1f850e3feb146b714

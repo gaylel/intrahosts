@@ -1,4 +1,4 @@
-cSIRsim<-function(NHosts=3, N=1000, SN=c(5,5,5), ST=c(7,9,11), rootname="test")
+cSIRsim<-function(NHosts=3, N=1000, SN=c(10,10,10), ST=c(7,11,16), rootname="test")
 {
 	# simulate data from the model
 	params<-list()

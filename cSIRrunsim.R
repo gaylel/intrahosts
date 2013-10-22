@@ -5,8 +5,10 @@ library("ape") ;
 library("phangorn") ;
 source("cSIRmain.R") ;
 source("cSIRio.R") 
+source("phylo.R")
 dyn.load("cSIR.so") ;
 
+set.seed(10000)
 # load in data
 load(file=paste(datadir,"/dat.RData",sep="")) ;
 seqs<-dnaBINmxtolist(datadir)
@@ -32,12 +34,15 @@ NHosts<-length(dat$SN) ;
 # calculate UPGMA tree for each within-host population
 
 
-<<<<<<< HEAD
-system.time(smp<-cSIR_SB_metrop2(nHosts=NHosts,I0=1,nS=1000,dr=1,dat=dat,x=seqs,N=50000))
-=======
-system.time(smp<-cSIR_SB_metrop2(nHosts=NHosts,I0=1,nS=1000,dr=1,dat=dat,x=seqs,N=200000))
->>>>>>> 9efa3e2269dea9d8828b5ae1f850e3feb146b714
-save(smp,file=paste(outdir,"/out.mcmc",sep="")) ;
+
+system.time(smp<-cSIR_SB_metrop2(nHosts=NHosts,I0=1,nS=1000,dr=1,dat=dat,x=seqs,N=10000))
+#save(smp,file=paste(outdir,"/out.mcmc",sep="")) ;
+vars<-c("mr","dr","B","ll","tr")
+for (i in seq(1,length(vars)))
+{
+	assign(vars[i],smp[[vars[i]]])
+	save(list=vars[i],file=paste(outdir,"/",vars[i],".mcmc",sep="")) ;
+}
 warnings()
 q()
 

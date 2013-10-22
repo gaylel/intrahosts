@@ -1,7 +1,8 @@
 #!/bin/bash
 
 
-outdir=../$(date +%Y%m%d) ;
+outdir=../run_$1
+#outdir=../$(date +%Y%m%d) ;
 mkdir $outdir ;
-datadir="../RData" ;
+datadir="../../RData" ;
 R --slave --vanilla --args $outdir $datadir < cSIRrun.R

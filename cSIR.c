@@ -180,6 +180,7 @@ SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, S
 	Free(p_RVAL2[0]) ;
 	Free(p_RVAL2) ;
 	Free(n) ;
+	
 	return(R_list);
 }
 
@@ -524,7 +525,7 @@ void cSIR_iters(int *n, int I0, int nS, int NHosts, double *B, double dr, int **
 	pp1[1][0]+=I0 ;
 	
 	i=1 ;
-	while (check_infectives(pp1[1],NHosts,i-1)==0 && i<100)
+	while (check_infectives(pp1[1],NHosts,i-1)==0 && i<10000)
 	{
 		cSIR_iter(i, nS, NHosts, B, dr, pp1, pp2) ;
 		i++ ;
@@ -701,9 +702,15 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 		{
 			R[i*NHosts + j]=I[(n-1)*NHosts + j]*S[(n-1)*NHosts + i]*B[i*NHosts + j]/(double)(nS) ;
 			sumR+= R[i*NHosts + j] ;
+			//Rprintf("%8.4f\t",R[i*NHosts+j]) ;
 		}
+		//Rprintf("\n") ;
 	}
-	
+	for (i=0; i<NHosts; i++)
+	{
+		//Rprintf("%8.4f\t",R[i+NHosts*NHosts]) ;
+	}
+	//Rprintf("\n\n\n") ;
 	for (i=0; i<(NHosts*(NHosts+1));i++)
 	{
 		R[i]=R[i]/sumR ;
@@ -768,7 +775,7 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 	
 	for (i=0; i<(NHosts*(NHosts+1));i++)
 	{
-		R[i]=(sumR==0) ? 0 : R[i]/sumR ;
+		R[i]=(sumR==0) ? 1.0/(double)(NHosts*(NHosts+1)) : R[i]/sumR ;
 	}
 	
 	// if there are any more infected left ..

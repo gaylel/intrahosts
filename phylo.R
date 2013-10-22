@@ -60,7 +60,7 @@ phylo_ne<-function(tr,h=-1)
 	if (length(h)>1)
 	{
 		nlmx<-matrix(h[fam],nrow(fam),ncol(fam)) ;
-		i<-which(nlmx[2,]==nlmx[4,]) ;
+		i<-which(nlmx[3,]==nlmx[4,]) ;
 		fam<-fam[,i] ;
 	}
 	# constrain by fam 
