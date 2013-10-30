@@ -1172,8 +1172,7 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
       v <- vars[m]
       acc.rate[[v]] <- c(acc.rate[[v]], params$is.acc)
     }
-    print(acc.rate)
-    print(params$B)
+
 		print(sprintf("%i loglikelihood   %8.4f   Mutation rate   %8.4f  Death rate %8.4f Move %i", t, params$ll, params$mr, params$dr, m))
 		if ((t %% 10)==0)
 		{

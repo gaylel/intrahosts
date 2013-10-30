@@ -1,0 +1,86 @@
+# initialisation
+init <- list(
+  B=list(
+    br1=1,
+    br2=0.01
+  ),
+  dr=0.1,
+  mr=1e-3,
+  I0=1,
+  NS=1000,
+  tr="random"
+)
+
+# hyperparams
+hp <- list(
+  B.br1=list(
+    dens="exp",
+    args=list(
+      rate=1
+    )
+  ),
+  B.br2=list(
+    dens="exp",
+    args=list(
+      rate=1/0.1
+    )
+  ),
+  mr=list(
+    dens="exp",
+    args=list(
+      rate=1/1e-4
+    )
+  ),
+  dr=list(
+    dens="exp",
+    args=list(
+      rate=1
+    )  
+  ),
+  mut=list(
+    model="GTR"
+  )
+)
+
+# mcmc params
+mcp <- list(
+  B=list(
+    dens="norm",
+    args=list(
+      mean=0,
+      sd=0.2
+    ),
+    type=2
+  ),
+  mr=list(
+    dens="norm",
+    args=list(
+      mean=0,
+      sd=0.5
+    )
+  ),
+  dr=list(
+    dens="norm",
+    args=list(
+      mean=0,
+      sd=0.5
+    )
+  ),
+  tr=list(
+    Ntries_sir=1000
+  ),
+  abc=list(
+    th=0.2
+  ),
+  Niters=100000,
+  acc.rate=1
+)
+
+# program options
+opt<-list(
+  checkinit=0,
+  chainvars=c("B","mr","tr","ll"),
+  movevars= c("T2", "B","T", "mr"),
+  firstN=1:5,
+  seed=100500
+)
