@@ -8,8 +8,9 @@ library("coda")
 source("cSIRmcmc.R") 
 
 #vars<-c("mr","dr","B","ll","tr")
-vars<-c("mr","dr","B","tr")
-vars<-c("tr","B","mr","dr","ll")
+vars<-c("B")
+
+
 pdf(paste(outdir,"/traces.pdf",sep=""))
 	
 for (i in seq(1,length(vars)))

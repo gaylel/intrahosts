@@ -35,13 +35,26 @@ switch(opt,
 		load(file=paste(testdir,"/tree.1.RData",sep=""))
 		library("ape")
 		pdf(paste(testdir,"/tree.2.pdf",sep=""))
-		tr_list<-.Call("tree_reconstruct",sir, NHosts, dat) 
-		save(tr_list,file=paste(testdir,"/tree.2.RData",sep=""))
-		tr_list[[1]]$node.label=as.character(seq(31,59))
-		plot.phylo(tr_list[[1]],show.node.label=TRUE)
-		dev.off()
-		print(tr_list)
+		for (i in seq(1,2))
+		{
+      tr_list<-.Call("tree_reconstruct",sir, NHosts, dat) 
+		  #save(tr_list,file=paste(testdir,"/tree.2.RData",sep=""))
+      #tre<-cSIR_phylosample(sir=sir,nS=NS,lo=lo,s=s,dat)
+		  tr_list[[1]]$node.label=as.character(seq(31,59))
+		  plot.phylo(tr_list[[1]],show.node.label=TRUE)
+      print(sir$T)
+      print(tr_list[[2]])
+      #print(tr_list)
+      bt<-cSIR_stimes(T=tr_list[[2]],lo=lo,s=s) ;
+      #print(bt)
+      
+      print(lo)
+      print(s)
+		}
+    dev.off()
+		
 	},
+    
 	"tree.3"={
 		load(file=paste(testdir,"/tree.2.RData",sep=""))
 		library("ape")

@@ -1,3 +1,8 @@
+cSIR_loadoptsparams <- function(opfile)
+{
+  source(opfile)
+}
+
 prior_init<-function(nHosts,dat)
 {
 	SN<-dat$SN 
@@ -31,7 +36,7 @@ prior_init<-function(nHosts,dat)
 	drvec<-NULL
 	pold<-cSIR_Bdrprior(B,Bcon,dr,l1,l2,l3)  ;
 	M=4
-	;
+	
 	
 	# initialise 
 	ini<-cSIR_upgma(x,SN,ST)
