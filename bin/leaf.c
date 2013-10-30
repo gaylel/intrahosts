@@ -33,35 +33,7 @@ struct leaf* R_to_leaf(SEXP R_lo, SEXP R_s)
 	}
 	return l ;
 }
-<<<<<<< HEAD
 
-=======
-/*
->>>>>>> 9efa3e2269dea9d8828b5ae1f850e3feb146b714
-int getmostrecentpair(int Ha, int Hb, leaf * l)
-{
-	// look for the most recent coalescing neighbouring pair in Ha and Hb
-	int i, m=l->NLeaves, m_i=-1 ;
-	for (i=0 ; i< (l->NLeaves - 2) ; i++)
-	{
-		if (l[i][3]!=l[i+1][3]) // separate nodes
-		{
-			if ((l[i][2]==Ha && l[i+1][2]==Hb) || (l[i][2]==Hb && l[i+1][2]==Ha))
-			{
-				if (l[i][4]>0 && l[i][4]<m)
-				{
-					m=l[i][4] ;
-					m_i=i ;
-				}
-			}
-		}	 
-	}
-	return m_i ;
-<<<<<<< HEAD
-}
-=======
-}*/
->>>>>>> 9efa3e2269dea9d8828b5ae1f850e3feb146b714
 
 struct leaf* leaf_update(double **T, leaf *l)
 {

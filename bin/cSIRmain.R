@@ -1145,7 +1145,7 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
 	{
 		# make new proposal
 		m <- cSIR_choosemove(moves)
-    print(m)
+
 		switch(as.character(m),
 		  "1"={
 		    params <- cSIR_mrupdate(x, params, dat.params, dat, hp.params, mcmc.params$mr)
@@ -1386,7 +1386,7 @@ cSIR_T2update<-function(x, params, dat.params, dat, hp.params, mcmc.params)
   pacc <- min(ll$logLik - params$ll, 0) 
   params$is.acc <- 0
   rv <- log(runif(1))
-  print(sprintf("pacc=%8.8f, rv=%8.8f, newll=%8.8f, oldll=%8.8f",pacc, rv, newll, params$ll))
+  #print(sprintf("pacc=%8.8f, rv=%8.8f, newll=%8.8f, oldll=%8.8f",pacc, rv, newll, params$ll))
   
   if (rv < pacc)
   {
@@ -1433,7 +1433,7 @@ cSIR_Bupdate<-function(params, dat.params, dat, hp.params, mcmc.params)
   if (tr_list$is.acc == 1)
   {
     tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
-    print(tstats)
+
     th <- mcmc.params$abc$th
     if (tstats$d1<th & tstats$d2<th)
     {
