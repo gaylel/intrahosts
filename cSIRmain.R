@@ -1131,9 +1131,13 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
   if (mcmc.params$acc.rate==1)
   {
     # calculate acceptance rates
+    ch$acc.rate <- list()
+    oldacc.rate <- list()
     acc.rate <- list()
     for (i in seq(1, length(opt$movevars)))
     {
+      ch$acc.rate[[opt$movevars[i]]] <- NULL
+      oldacc.rate[[opt$movevars[i]]] <- NULL
       acc.rate[[opt$movevars[i]]] <- 1
     }
     print(acc.rate)
@@ -1170,14 +1174,48 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
     if (mcmc.params$acc.rate==1)
     {
       v <- vars[m]
-      acc.rate[[v]] <- c(acc.rate[[v]], params$is.acc)
+      if (length(acc.rate[[v]])<100)
+      {
+        acc.rate[[v]] <- c(acc.rate[[v]], params$is.acc)
+      }else{
+        acc.rate[[v]] <- c(acc.rate[[v]][2:100], params$is.acc)
+      }  
+      
+      for (i in seq(1, length(opt$movevars)))
+      {
+       
+        ch$acc.rate[[opt$movevars[i]]] <- c(ch$acc.rate[[opt$movevars[i]]], oldacc.rate[[opt$movevars[i]]])
+        #oldacc.rate[[opt$movevars[i]]] <- ch$acc.rate[[opt$movevars[i]]][length()] 
+      }
+      oldacc.rate[[v]] <- mean(acc.rate[[v]])
+      ch$acc.rate[[v]] <- c(ch$acc.rate[[v]], mean(acc.rate[[v]]))
+
     }
-    print(acc.rate)
     print(params$B)
 		print(sprintf("%i loglikelihood   %8.4f   Mutation rate   %8.4f  Death rate %8.4f Move %i", t, params$ll, params$mr, params$dr, m))
-		if ((t %% 10)==0)
+		#if ((t %% 10)==0)
+		#{
+		#	plot.phylo(params$tr_list$tr,show.node.label=TRUE) 
+		#}
+    
+		if (opt$saveevery > 0 & ((t %% opt$saveevery) == 0))
 		{
-			plot.phylo(params$tr_list$tr,show.node.label=TRUE) 
+		  vars2 <- opt$chainvars
+		  for (i in seq(1,length(vars2)))
+		  {
+		    assign(vars2[i],ch[[vars2[i]]])
+		    save(list=vars2[i],file=paste(opt$outdir,"/",vars2[i], "_", t,".mcmc",sep="")) ;
+		  }
+		  if (mcmc.params$acc.rate==1)
+		  {
+		    acc_rate <- ch$acc.rate
+		    save(acc_rate, file=paste(outdir,"/acc.rate", "_", t,".mcmc",sep=""))
+		  }  
+      
+      for (i in seq(1,length(ch)))
+      {
+        ch[[i]] <- list()
+      }
 		}
 		t <- t + 1
 	}
