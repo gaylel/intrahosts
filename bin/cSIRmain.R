@@ -1636,12 +1636,12 @@ cSIR_Tupdate<-function(x, params, dat.params, dat, hp.params, mcmc.params)
   if (tr_list$is.acc==1)
 	{
 	  llcur<-params$ll
-    print(min(tr_list$tr$edge.length))
+    #print(min(tr_list$tr$edge.length))
     #print(tabulate(tr_list$tr$edge[,1]))
     #print(tabulate(tr_list$tr$edge[,2]))
     #print(tr_list$tr$edge)
 	  ll <- pml(tr_list$tr, x, rate=params$mr, model=hp.params$mut$model)  
-	  print(ll)
+	  
 	  pacc <- min(ll$logLik - llcur, 0)			
 	  if (log(runif(1)) <= pacc)
 	  {
