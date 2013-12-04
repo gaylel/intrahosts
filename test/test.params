@@ -1,41 +1,66 @@
 # initialisation
 init <- list(
   B=list(
-    br1=1,
-    br2=0.01
+    br1=2,
+    br2=0.001
   ),
-  dr=0.1,
+  dr=1,
   mr=1e-3,
   I0=1,
   NS=1000,
+  bn=0.1,
+  t_off=7,
   tr="random"
 )
 
 # hyperparams
 hp <- list(
   B.br1=list(
-    dens="exp",
+    dens="unif",
     args=list(
-      rate=1
+      min=1e-6,
+      max=100
     )
   ),
   B.br2=list(
-    dens="exp",
+    dens="unif",
     args=list(
-      rate=1/0.1
+      min=1e-6,
+      max=100
     )
+
   ),
   mr=list(
-    dens="exp",
+    dens="unif",
     args=list(
-      rate=1/1e-4
+      min=1e-6,
+      max=100
     )
+
+  ),
+  bn=list(
+    dens="unif",
+    args=list(
+      min=1e-6,
+      max=100
+    )
+
   ),
   dr=list(
-    dens="exp",
+    dens="unif",
     args=list(
-      rate=1
-    )  
+      min=1e-6,
+      max=100
+    )
+
+
+  ),
+  t_off=list(
+    dens="unif",
+    args=list(
+      min=1e-6,
+      max=100
+    )
   ),
   mut=list(
     model="GTR"
@@ -48,7 +73,7 @@ mcp <- list(
     dens="norm",
     args=list(
       mean=0,
-      sd=0.2
+      sd=0.01
     ),
     type=2
   ),
@@ -56,31 +81,47 @@ mcp <- list(
     dens="norm",
     args=list(
       mean=0,
-      sd=0.5
+      sd=0.01
+    )
+  ),
+  bn=list(
+    dens="norm",
+    args=list(
+      mean=0,
+      sd=0.01
     )
   ),
   dr=list(
     dens="norm",
     args=list(
       mean=0,
-      sd=0.5
+      sd=0.01
+    )
+  ),
+  t_off=list(
+    dens="norm",
+    args=list(
+      mean=0,
+      sd=0.01
     )
   ),
   tr=list(
-    Ntries_sir=1000
+    Ntries_sir=200
   ),
   abc=list(
-    th=0.2
+    th=0.01
   ),
-  Niters=100000,
+  Niters=200000,
   acc.rate=1
 )
 
 # program options
 opt<-list(
   checkinit=0,
-  chainvars=c("B","mr","tr","ll"),
-  movevars= c("T2", "B","T", "mr"),
-  firstN=1:5,
-  seed=100500
+  chainvars=c("B","mr","tr", "dr","ll", "bn", "t_off"),
+  movevars= c("bn", "T", "T2", "dr",  "B", "mr", "t_off", "T3"),
+  #movevars= c("T", "T2", "T3"),
+  firstN=c(9,10,13,18),
+  seed=10000,
+  saveevery=1000
 )

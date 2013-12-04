@@ -11,17 +11,38 @@ mcmc_loadsmps<-function(resdir)
 	return(smp)
 }
 
-mcmc_loadsmp<-function(resdir,var)
+mcmc_loadvar <- function(resdir, var, opt, mcp)
 {
-	# when smps are stored individually
+  if (opt$saveevery > 0)
+  {
+    i <- 1
+    smp <- NULL
+    while (i*opt$saveevery < mcp$Niters)
+    {
+      load(paste(resdir, "/", var, "_", format(i*opt$saveevery, scientific=FALSE), ".mcmc", sep=""))
+      smp<-c(smp,eval(parse(text=var)))
+      i <- i + 1
+    }
+    
+  }else{
+    load(paste(resdir, "/", var, ".mcmc", sep=""))  
+    smp<-eval(parse(text=var))
+  }
+  smp[[1]] <- NULL
+  return(smp)
+}
+
+mcmc_loadsmp<-function(resdir,var, opt, mcp)
+{
+	# when smps are stored individually
 	
 	vn<-list()
 	switch(var,
 	"B"={
-		load(paste(resdir,"/",var,".mcmc",sep=""))
-		smp<-eval(parse(text=var))
-		NHosts<-ncol(smp[[1]])
-		smp<-t(matrix(unlist(smp),nrow=NHosts*NHosts))
+	  smp <- mcmc_loadvar(resdir, var, opt, mcp)
+    NHosts<-ncol(smp[[1]])
+    smp<-t(matrix(unlist(smp),nrow=NHosts*NHosts))
+    
 		
 		k=1
 		for (i in seq(1,NHosts))
@@ -36,9 +57,8 @@ mcmc_loadsmp<-function(resdir,var)
 	},
 	"tr"={
 		library("ape")
-		load(paste(resdir,"/",var,".mcmc",sep=""))
-		smp<-eval(parse(text=var))
-		#mcmc_writetrees(smp, resdir)	
+		smp <- mcmc_loadvar(resdir, var, opt, mcp)
+		# mcmc_writetrees(smp[5000:length(smp)], resdir)	
 		#tr<-read.nexus(paste(resdir,"/out.trees",sep=""))
 		tr<-smp
 		#smp<-matrix(0,ncol=length(tr[[1]]$tip.label)-1,nrow=length(tr)/100)
@@ -60,10 +80,17 @@ mcmc_loadsmp<-function(resdir,var)
 		smp<-mcmc_convert(smp,100)
 		#smp<-mcmc_convert(smp)
 	},
+  "tr_out"={
+    library("ape")
+    smp <- mcmc_loadvar(resdir, "tr", opt, mcp)
+    smp <- smp[50000:length(smp)]
+    mcmc_writetrees(smp[5000:length(smp)], resdir)
+    smp <- NULL
+  },       
 	{
-		load(paste(resdir,"/",var,".mcmc",sep=""))
-		smp<-eval(parse(text=var))
-		smp<-matrix(unlist(smp),ncol=1)
+	  smp <- mcmc_loadvar(resdir, var, opt, mcp)
+	  smp<-matrix(unlist(smp),ncol=1)
+    print(smp)
 		vn[[1]]<-var
 		smp<-mcmc_convert(smp)
 	}

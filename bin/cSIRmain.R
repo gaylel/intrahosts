@@ -1,5 +1,6 @@
 cSIR <- function(I0=1,nS=100,br=2,dr=1,maxiters=50)
 {
+  
   # Generates population trajectory following stochastic
   # continuous time SIR dynamics. 
   #
@@ -216,6 +217,120 @@ cSIR_reconstructedtree<-function(tre, T)
 	}
 }
 
+cSIRfull_tree <- function(sir)
+{
+  # generate possible underlying tree (including extinctions)
+  T <- sir$T
+  Iend <- sir$Iend
+  print(Iend)
+  ntips <- -sum(T[which(T[,4] < 0),4]) + sum(sir$I[nrow(sir$I),])
+  print(ntips)
+  nT <- nrow(T)
+  e <- NULL
+  el <- vector()
+  nl <- vector()
+  Inode <- ntips + 1
+  Leafnode <- 1
+  leaf_i <- -1
+  Nodes <- matrix(c(Inode,1), nrow=2, ncol=1)
+  NodeTimes <- rbind(seq(1,2*ntips-1), rep(0,2*ntips-1))
+  #NodeTimes[ntips-1,2] <- 0
+  for (i in seq(2, nT))
+  {
+    if (T[i,4] > 0)
+    {
+      for (j in seq(1,T[i,4]))
+      {
+        h <- which(Nodes[2,] == T[i,2])
+        parent <- ifelse(length(h) > 1, sample(Nodes[1,h],1), Nodes[1,h]) 
+        l <- which(e[, 2]==parent)
+        if (length(l)>0)
+        {
+          e[l ,2] <- Inode
+        }
+        nl <- c(nl,T[i,2])
+        Nodes <- matrix(Nodes[,-(which(Nodes[1,]==parent))],nrow=2)
+        parent <- Inode
+        
+        e <- rbind(e,c(parent, leaf_i))
+        e <- rbind(e,c(parent, leaf_i - 1))
+        NodeTimes[parent] <- T[i, 1]
+        Nodes <- cbind(Nodes, matrix(c(leaf_i, T[i,2]), nrow=2, ncol=1))
+        Nodes <- cbind(Nodes, matrix(c(leaf_i - 1, T[i,3]), nrow=2, ncol=1))
+        leaf_i <- leaf_i - 2
+        
+        Inode <- Inode + 1
+      }
+    }
+    if (T[i,4] < 0)
+    {
+      
+      for (j in seq(1, -T[i,4]))
+      {
+        h <- which(Nodes[2,] == T[i,2])
+        
+        leaf <- ifelse(length(h) > 1, sample(Nodes[1,h],1), Nodes[1,h]) 
+        l <- which(e[, 2]==leaf)
+        if (length(l)>0)
+        {
+          e[l ,2] <- Leafnode
+          Nodes <- matrix(Nodes[,-(which(Nodes[1,]==leaf))],nrow=2)
+          leaf <- Leafnode
+          NodeTimes[Leafnode] <- T[i, 1]
+          Leafnode <- Leafnode + 1
+          
+          
+        }
+        
+        NodeTimes[leaf] <- T[i,1]
+        
+      }
+    }
+    #print(e)
+    #print(Nodes)
+    # construct the tree
+  }
+  
+  Irem <- sir$Iend[nrow(sir$Iend),]
+    for (i in seq(1,length(Irem)))
+    {
+      if (Irem[i] > 0)
+      {
+        for (j in seq(1, Irem[i]))
+        {
+          h <- which(Nodes[2,] == i)
+          leaf <- ifelse(length(h) > 1, sample(Nodes[1,h],1), Nodes[1,h]) 
+          l <- which(e[, 2]==leaf)
+          if (length(l)>0)
+          {
+            e[l ,2] <- Leafnode
+            Nodes <- matrix(Nodes[,-(which(Nodes[1,]==leaf))],nrow=2)
+            leaf <- Leafnode
+            NodeTimes[Leafnode] <- T[nrow(T), 1]
+            Leafnode <- Leafnode + 1
+          }
+        
+        }
+      }  
+    }
+    
+     
+  
+  
+  for (i in seq(1,nrow(e)))
+  {
+    el <- c(el, NodeTimes[e[i,2]] - NodeTimes[e[i,1]])
+  }
+  tr <- list()
+  tr$edge <- e
+  tr$edge.length <- el
+  tr$Nnode <- ntips - 1
+  tr$node.label <- as.character(nl)
+  tr$tip.label <- seq(1,ntips)
+  class(tr) <- "phylo"
+  return(list(tr=tr,nt=NodeTimes))
+}
+
 cSIRtree_reconstruct<-function(sir,N=100,SN,ST)
 {
 	I<-sir[[1]] ;
@@ -391,7 +506,7 @@ sample_cSIR_C <-function(I0, NS, NHosts, B, dr)
 	return(sir) ;
 }
 
-sample_cSIR_S_C <- function(I0, NS, NHosts, B, dr, SN, ST)
+sample_cSIR_S_C <- function(I0, NS, NHosts, B, dr, SN, ST, bnprob)
 {
   # Samples SIR population trajectory for given parameters and data
   #
@@ -410,7 +525,7 @@ sample_cSIR_S_C <- function(I0, NS, NHosts, B, dr, SN, ST)
   #     T:  matrix of events: T[i,]={time, from host, to host, [1=birth,-1=death]}
   #     Iend: vector of infected size for each host at times ST
   
-	sir1 <- .Call("sample_cSIR_S_R", I0, NS, NHosts, B, dr, ST, SN) ;
+	sir1 <- .Call("sample_cSIR_S_R", I0, NS, NHosts, B, dr, ST, SN, bnprob) ;
 	sir <- list(I=sir1[[1]], S=sir1[[2]], T=sir1[[3]], Iend=sir1[[4]]) ;
 	sir$T[,2:3] <- sir$T[,2:3] + 1 ;
 	sir$B <- B ;
@@ -568,7 +683,7 @@ cSIR_Bstruct<-function(ST)
 	return(Bcon) ;
 }
 
-cSIR_ne<-function(tr,SN,lo,s)
+cSIR_ne<-function(tr,SN,lo,s,mode)
 {
 	nHosts<-length(SN)
 	nl<-NULL
@@ -577,7 +692,14 @@ cSIR_ne<-function(tr,SN,lo,s)
 		nl<-c(nl,rep(i,SN[i])) ;
 	}
 	nl<-c(nl,as.integer(tr$node.label)) ;
-	tr<-phylo_ne(tr,nl)
+	switch(as.character(mode),
+		"1"={
+			tr<-phylo_ne_2(tr,nl)
+		},
+		"2"={
+			tr<-phylo_ne_3(tr,nl)
+		}
+	)
 	res<-s_lo_from_phylo(tr)
 	h<-match(res$lo,lo[1,])
 	res$lo<-rbind(res$lo,lo[2,h])
@@ -763,7 +885,11 @@ cSIR_modelinit <- function(x, init, dat, dat.params, mcmc.params)
   # Returns:
   #   params
   
+  
+  
+  dat$ST <- dat$STin + init$t_off
   ST <- dat$ST
+  print(ST)
   SN <- dat$SN
   Bcon <- cSIR_Bstruct(ST=ST) 
   B <- cSIR_Binit(init, Bcon)
@@ -772,7 +898,8 @@ cSIR_modelinit <- function(x, init, dat, dat.params, mcmc.params)
   trinit <- cSIR_trinit(init, x, dat)
   print(trinit)
   llcur <- log(0)  
-  params <- list(B=B, dr=dr, mr= mr, ll=llcur, Bcon=Bcon, tr_list=list(lo=trinit$lo, s=trinit$s), is.acc=0)
+  params <- list(B=B, dr=dr, mr= mr, ll=llcur, Bcon=Bcon, tr_list=list(lo=trinit$lo, s=trinit$s), bn=init$bn, t_off=init$t_off, is.acc=0)
+
   tr_list <- cSIR_drawtr_list(params, dat.params, dat, mcmc.params$tr)
   
   params$tr_list <- tr_list
@@ -842,6 +969,35 @@ cSIR_mrprior <- function(mr=NULL, hp, mode="r", is.log=TRUE)
   return(rv)
 }
 
+cSIR_bnprior <- function(bn=NULL, hp, mode="r", is.log=TRUE)
+{
+  # Prior on mr
+  # Args:
+  #   mr: current value of mr
+  #   hp: information about the prior
+  #   mode: 
+  #     "d": evaluates density for current value mr
+  #     "r": draws value of mr from prior
+  #   is.log: indicates whether log(d) is returned
+  # Returns:
+  #   rv: density or random value
+  
+  args <- hp$args
+  switch(mode,
+         "d"={
+           args$x <- bn
+           args$log <- is.log
+           rv <- do.call(paste("d", hp$dens, sep=""), args)       
+         },
+         "r"={
+           args$n <- 1
+           rv <- do.call(paste("r", hp$dens, sep=""), args)       
+         }  
+  )
+  return(rv)
+}
+
+
 cSIR_drprior <- function(dr=NULL, hp, mode="r", is.log=TRUE)
 {
   # Prior on dr
@@ -859,6 +1015,34 @@ cSIR_drprior <- function(dr=NULL, hp, mode="r", is.log=TRUE)
   switch(mode,
          "d"={
            args$x <- dr
+           args$log <- is.log
+           rv <- do.call(paste("d", hp$dens, sep=""), args)       
+         },
+         "r"={
+           args$n <- 1
+           rv <- do.call(paste("r", hp$dens, sep=""), args)       
+         }  
+  )
+  return(rv)
+}
+
+cSIR_t_offprior <- function(t_off=NULL, hp, mode="r", is.log=TRUE)
+{
+  # Prior on t_off
+  # Args:
+  #   dr: current value of dr
+  #   hp: information about the prior
+  #   mode: 
+  #     "d": evaluates density for current value dr
+  #     "r": draws value of mr from prior
+  #   is.log: indicates whether log(d) is returned
+  # Returns:
+  #   rv: density or random value
+  
+  args <- hp$args
+  switch(mode,
+         "d"={
+           args$x <- t_off
            args$log <- is.log
            rv <- do.call(paste("d", hp$dens, sep=""), args)       
          },
@@ -1025,8 +1209,8 @@ cSIR_drproposal <- function(olddr, prop.params)
   args <- prop.params$args
   args$n <- 1
   m <- do.call(paste("r", prop.params$dens, sep=""), args)       
-  mr <- exp(log(olddr) + m)
-  return(mr) ;
+  dr <- exp(log(olddr) + m)
+  return(dr) ;
 }
 
 cSIR_mrproposal <- function(oldmr, prop.params)
@@ -1046,7 +1230,43 @@ cSIR_mrproposal <- function(oldmr, prop.params)
   return(mr) ;
 }
 
-cSIR_choosemove <- function(moves)
+cSIR_t_offproposal <- function(oldt_off, prop.params)
+{
+  # Propose a new value for mr 
+  #
+  # Args:
+  #   oldmr: current value of mr
+  #   prop.params: parameters of the proposal
+  # Returns:
+  #   mr
+  
+  args <- prop.params$args
+  args$n <- 1
+  m <- do.call(paste("r", prop.params$dens, sep=""), args)       
+  t_off <- exp(log(oldt_off) + m)
+  return(t_off) ;
+}
+
+cSIR_bnproposal <- function(oldbn, prop.params)
+{
+  # Propose a new value for mr 
+  #
+  # Args:
+  #   oldmr: current value of mr
+  #   prop.params: parameters of the proposal
+  # Returns:
+  #   mr
+  
+  args <- prop.params$args
+  args$n <- 1
+  m <- do.call(paste("r", prop.params$dens, sep=""), args)      
+  logitbn <- log(oldbn/(1-oldbn))
+  bn <- exp(logitbn + m)
+  bn <- bn / (bn+1)
+  return(bn) ;
+}
+
+cSIR_choosemove <- function(moves, prob=NULL)
 {
   # Picks a move at random
   #
@@ -1055,7 +1275,7 @@ cSIR_choosemove <- function(moves)
   # Returns;
   #   m: move
   
-  m <- ifelse(length(moves)>1,sample(moves, 1), moves)
+  m <- ifelse(length(moves)>1,sample(moves, 1, prob=prob), moves)
   return(m)
 }
   
@@ -1120,9 +1340,18 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
   SN<-dat$SN 
   ST<-dat$ST 
   dat.params<-list(I0=init$I0, NS=init$NS, NHosts=length(SN))
-  vars <- c("mr","dr", "T", "B", "T2", "B_T")
+  
+  
+  
+  dat$STin = dat$ST - min(dat$ST)
+    
+  
+  vars <- c("mr","dr", "T", "B", "T2", "B_T", "bn", "t_off", "T3")
+  
   params <- cSIR_modelinit(x, init, dat, dat.params, mcmc.params)
   moves <- cSIR_movesinit(opt$movevars, vars) 
+  prob <- rep(0.5/8, 8)
+  prob[3] <- 0.5 
 	ch <- cSIR_chainsinit(opt$chainvars)
   ch <- cSIR_chainsupdate(ch, opt$chainvars, params)
   
@@ -1131,9 +1360,13 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
   if (mcmc.params$acc.rate==1)
   {
     # calculate acceptance rates
+    ch$acc.rate <- list()
+    oldacc.rate <- list()
     acc.rate <- list()
     for (i in seq(1, length(opt$movevars)))
     {
+      ch$acc.rate[[opt$movevars[i]]] <- NULL
+      oldacc.rate[[opt$movevars[i]]] <- NULL
       acc.rate[[opt$movevars[i]]] <- 1
     }
     print(acc.rate)
@@ -1141,17 +1374,18 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
     
   
   t <- 1
-	while (t < mcp$Niters)
+	while (t <= mcp$Niters)
 	{
 		# make new proposal
-		m <- cSIR_choosemove(moves)
+		m <- cSIR_choosemove(moves, prob)
 
+   
 		switch(as.character(m),
 		  "1"={
 		    params <- cSIR_mrupdate(x, params, dat.params, dat, hp.params, mcmc.params$mr)
 		  },
 		  "2"={
-		    params <- cSIR_drupdate(params, dat.params, dat, hp.params, mcmc.params$dr)
+		    params <- cSIR_drupdate(params, dat.params, dat, hp.params, mcmc.params)
 		  },
 		  "3"={
 		    params <- cSIR_Tupdate(x, params, dat.params, dat, hp.params, mcmc.params$tr)
@@ -1160,23 +1394,66 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
 		    params <- cSIR_Bupdate(params, dat.params, dat, hp.params, mcmc.params)
     	},
 		  "5"={
-		    params <- cSIR_T2update(x, params, dat.params, dat, hp.params, mcmc.params$tr)
+		    params <- cSIR_T2update(x, params, dat.params, dat, hp.params, mcmc.params$tr, 1)
+        
 		  },
 		  "6"={ 
 		    params <- cSIR_B_T_update(x, params, dat.params, dat, hp.params, mcmc.params)
+		  },
+		  "7"={ 
+		    params <- cSIR_bnupdate(params, dat.params, dat, hp.params, mcmc.params)
+		  },
+		  "8"={ 
+		    params <- cSIR_t_offupdate(params, dat.params, dat, hp.params, mcmc.params)
+		  },
+		  "9"={
+		    params <- cSIR_T2update(x, params, dat.params, dat, hp.params, mcmc.params$tr, 2)
+        
 		  }
 		)
 		ch <- cSIR_chainsupdate(ch, opt$chainvars, params)
     if (mcmc.params$acc.rate==1)
     {
       v <- vars[m]
-      acc.rate[[v]] <- c(acc.rate[[v]], params$is.acc)
-    }
+      if (length(acc.rate[[v]])<100)
+      {
+        acc.rate[[v]] <- c(acc.rate[[v]], params$is.acc)
+      }else{
+        acc.rate[[v]] <- c(acc.rate[[v]][2:100], params$is.acc)
+      }  
+      
+      for (i in seq(1, length(opt$movevars)))
+      {
+       
+        ch$acc.rate[[opt$movevars[i]]] <- c(ch$acc.rate[[opt$movevars[i]]], oldacc.rate[[opt$movevars[i]]])
+        #oldacc.rate[[opt$movevars[i]]] <- ch$acc.rate[[opt$movevars[i]]][length()] 
+      }
+      oldacc.rate[[v]] <- mean(acc.rate[[v]])
+      ch$acc.rate[[v]] <- c(ch$acc.rate[[v]], mean(acc.rate[[v]]))
 
-		print(sprintf("%i loglikelihood   %8.4f   Mutation rate   %8.4f  Death rate %8.4f Move %i", t, params$ll, params$mr, params$dr, m))
-		if ((t %% 10)==0)
+    }
+    
+    print(sprintf("%i loglikelihood   %8.4f   Mutation rate   %8.4f  Death rate %8.4f BN %8.4f t_off %8.4f Move %i", t, params$ll, params$mr, params$dr,params$bn, params$t_off, m))
+	
+    
+		if (opt$saveevery > 0 & ((t %% opt$saveevery) == 0))
 		{
-			plot.phylo(params$tr_list$tr,show.node.label=TRUE) 
+		  vars2 <- opt$chainvars
+		  for (i in seq(1,length(vars2)))
+		  {
+		    assign(vars2[i],ch[[vars2[i]]])
+		    save(list=vars2[i],file=paste(opt$outdir,"/",vars2[i], "_", t,".mcmc",sep="")) ;
+		  }
+		  if (mcmc.params$acc.rate==1)
+		  {
+		    acc_rate <- ch$acc.rate
+		    save(acc_rate, file=paste(outdir,"/acc.rate", "_", t,".mcmc",sep=""))
+		  }  
+      
+      for (i in seq(1,length(ch)))
+      {
+        ch[[i]] <- list()
+      }
 		}
 		t <- t + 1
 	}
@@ -1190,22 +1467,22 @@ cSIR_demo_1<-function()
 	B<-matrix(0,nrow=3,ncol=3)
 	for (i in seq(1,3))
 	{
-		B[i,i]<-2
+		B[i,i]<-1
 	}
-	B[2,3]<-0.8
-	B[1,2]<-0.7
-	B[2,1]<-0.9
+	B[2,3]<-0.01
+	B[1,2]<-0.01
+	B[2,1]<-0
 	I0<-1
-	NS<-1000
+	NS<-100
 	NHosts<-3
-	dr<-1
+	dr<-0.6
 	SN<-c(10,10,10)
 	ST<-c(7,9,11)
 	Nacc<-0
 	while(Nacc==0)
 	{
-		sir<-sample_cSIR_S_C(I0=I0, NS=NS, NHosts = NHosts, B=B, dr=dr, SN=SN, ST=ST) 
-		print(sir$Iend)
+		sir<-sample_cSIR_S_C(I0=I0, NS=NS, NHosts = NHosts, B=B, dr=dr, SN=SN, ST=ST, 0.1) 
+		
 		if (cSIR_eval(sir,SN)>0)
 		{Nacc<-1}
 	}
@@ -1230,12 +1507,16 @@ cSIR_drawtr_list <- function(params, dat.params, dat, mcmc.params)
   #       is.acc: 1: new phylo has been generated, 0: new phylo hasn't been generated
   
   tr_list <- params$tr_list 
-	sir <- cSIR_trdraw1(params, dat.params, dat, mcmc.params)
+  dat$ST <- dat$STin  + params$t_off
+  sir <- cSIR_trdraw1(params, dat.params, dat, mcmc.params)
   if (sir$is.acc==1)
   {
     tr_list <- cSIR_trdraw2(sir, dat, dat.params)
+
     tr_list <- cSIR_trdraw3(tr_list$T, dat, params$tr_list)
+
   }
+
   tr_list$is.acc <- sir$is.acc
   return(tr_list)
 }
@@ -1261,6 +1542,7 @@ cSIR_trdraw1 <- function(params, dat.params, dat, mcmc.params)
   NHosts <- dat.params$NHosts
   B <- params$B
   dr <- params$dr
+  bnprob <- params$bn
   SN <- dat$SN
   st <- dat$ST
   t <- 0
@@ -1269,13 +1551,14 @@ cSIR_trdraw1 <- function(params, dat.params, dat, mcmc.params)
   while (t < mcmc.params$Ntries_sir & is.acc==0 )
   {
     # draw SIR sample
-    sir <- sample_cSIR_S_C(I0=I0, NS=NS, NHosts = NHosts, B=B, dr=dr, SN=dat$SN, ST=dat$ST)
+    sir <- sample_cSIR_S_C(I0=I0, NS=NS, NHosts = NHosts, B=B, dr=dr, SN=dat$SN, ST=dat$ST, bnprob)
     if (cSIR_eval(sir,dat$SN)>0)
     {
       # if accepted
       is.acc <- 1 
     }
     t <- t + 1
+    
   }
   sir$is.acc <- is.acc
   return(sir)
@@ -1322,7 +1605,9 @@ cSIR_trdraw3 <- function(T, dat, tr.params)
   s <- tr.params$s
   bt <- cSIR_stimes(T=T,lo=lo,s=s) 
   tr <- cSIR_phylofroms(s=bt$s, lo=bt$lo, T=T, dat=dat) 
+  tr$edge.length[tr$edge.length<0] <- 1e-10
   tr_list <- list(tr=tr, T=T, lo=bt$lo, s=bt$s)
+
   return(tr_list)
 }
 
@@ -1351,7 +1636,12 @@ cSIR_Tupdate<-function(x, params, dat.params, dat, hp.params, mcmc.params)
   if (tr_list$is.acc==1)
 	{
 	  llcur<-params$ll
+    print(min(tr_list$tr$edge.length))
+    #print(tabulate(tr_list$tr$edge[,1]))
+    #print(tabulate(tr_list$tr$edge[,2]))
+    #print(tr_list$tr$edge)
 	  ll <- pml(tr_list$tr, x, rate=params$mr, model=hp.params$mut$model)  
+	  print(ll)
 	  pacc <- min(ll$logLik - llcur, 0)			
 	  if (log(runif(1)) <= pacc)
 	  {
@@ -1364,7 +1654,7 @@ cSIR_Tupdate<-function(x, params, dat.params, dat, hp.params, mcmc.params)
 	return(params)
 }
 
-cSIR_T2update<-function(x, params, dat.params, dat, hp.params, mcmc.params)
+cSIR_T2update<-function(x, params, dat.params, dat, hp.params, mcmc.params, mode=1)
 {
   # Updates ancestral tree of infected intrahost populations, based on narrow exchange
   # Args:
@@ -1377,7 +1667,7 @@ cSIR_T2update<-function(x, params, dat.params, dat, hp.params, mcmc.params)
   #   params
   # narrow exchange
 
-  res <- cSIR_ne(params$tr_list$tr, dat$SN, params$tr_list$lo, params$tr_list$s)
+  res <- cSIR_ne(params$tr_list$tr, dat$SN, params$tr_list$lo, params$tr_list$s, mode=mode)
   lo <- res$lo 
   s <- res$s 
   tr <- res$tr 
@@ -1398,6 +1688,7 @@ cSIR_T2update<-function(x, params, dat.params, dat, hp.params, mcmc.params)
     params$ll <- ll$logLik
     params$is.acc <- 1
   }
+  
   return(params)
 }
 
@@ -1433,7 +1724,7 @@ cSIR_Bupdate<-function(params, dat.params, dat, hp.params, mcmc.params)
   if (tr_list$is.acc == 1)
   {
     tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
-
+    print(tstats)
     th <- mcmc.params$abc$th
     if (tstats$d1<th & tstats$d2<th)
     {
@@ -1449,6 +1740,35 @@ cSIR_Bupdate<-function(params, dat.params, dat, hp.params, mcmc.params)
     
   }
 	return(params)			
+}
+
+cSIR_bnupdate<-function(params, dat.params, dat, hp.params, mcmc.params)
+{
+  newbn <- cSIR_bnproposal(params$bn, mcmc.params$bn)  
+  oldbn<-params$bn
+  params$bn<-newbn
+  tr_list <- cSIR_drawtr_list(params=params, dat.params=dat.params, dat=dat, mcmc.params=mcmc.params$tr)
+  params$bn<-oldbn
+  params$is.acc <- 0
+  
+  if (tr_list$is.acc == 1)
+  {
+    tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
+    th <- mcmc.params$abc$th
+    if (tstats$d1<th & tstats$d2<th)
+    {
+      pold <- cSIR_bnprior(bn=oldbn, hp.params$bn, mode="d", is.log=TRUE) 
+      pnew <- cSIR_bnprior(bn=newbn, hp.params$bn, mode="d", is.log=TRUE) 
+      h<-min(1,exp(pnew - pold)) 
+      if (runif(1)<=h)
+      {
+        params$bn<-newbn
+        params$is.acc <- 1
+      }
+    }
+    
+  }
+  return(params)			
 }
 
 cSIR_drupdate <- function(params, dat.params, dat, hp.params, mcmc.params)
@@ -1516,6 +1836,34 @@ cSIR_mrupdate <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 	return(params)	
 }
 
+cSIR_t_offupdate <- function(params, dat.params, dat, hp.params, mcmc.params)
+{
+  newt_off <- cSIR_t_offproposal(params$t_off, mcmc.params$t_off)  
+  oldt_off<-params$t_off
+  params$t_off<-newt_off
+  tr_list <- cSIR_drawtr_list(params=params, dat.params=dat.params, dat=dat, mcmc.params=mcmc.params$tr)
+  params$t_off<-oldt_off
+  params$is.acc <- 0
+  
+  if (tr_list$is.acc == 1)
+  {
+    tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
+    th <- mcmc.params$abc$th
+    if (tstats$d1<th & tstats$d2<th)
+    {
+      pold <- cSIR_t_offprior(t_off=oldt_off, hp.params$t_off, mode="d", is.log=TRUE)
+      pnew <- cSIR_t_offprior(t_off=newt_off, hp.params$t_off, mode="d", is.log=TRUE)
+      h<-min(1,exp(pnew - pold)) ;
+      if (runif(1)<=h)
+      {
+        params$t_off<-newt_off
+        params$is.acc <- 1
+      }
+    }
+    
+  }
+  return(params)  		
+}
 cSIR_phylosample<-function(sir,nS,lo,s,dat)
 {
   #     
@@ -1598,19 +1946,27 @@ cSIR_phylofroms<-function(s,lo,T,dat)
 		return(tr) ;
 }
 
-cSIR_plottraj<-function(sir)
+cSIR_plottraj<-function(sir, cols, fname)
 {
 	# plot infected trajectories
 	I<-sir$I ;
 	T<-sir$T ;
+  
 	nHosts<-ncol(I) ;
 	mI<-max(I)+10 ;
-	plot(T[,1],I[,1],ylim=c(0,mI),type="s") ;
+  xlim=c(0,max(T[,1]))
+	#pdf(fname)
+  postscript(file=fname, width=10, height=5, pointsize=12 , horizontal = FALSE, onefile = FALSE, paper = "special")
+  plot(T[I[,1]>0,1],I[I[,1]>0,1],xlim=xlim, ylim=c(0,mI),type="s", col=cols[1],xlab=expression(t), ylab=expression(I(t)), lwd = 3, cex=2, axes=FALSE) ;
+  axis(1)
+  axis(2)
+  
 	for (i in seq(2,nHosts))
 	{
-		lines(T[,1],I[,i],type="s") ;
+		lines(T[I[,i]>0,1],I[I[,i]>0,i],type="s", col=cols[i], lwd = 3) ;
 	}
-
+  dev.off()
+ 
 }
 
 cSIR_treeparams<-function(tre,SN,ST)
@@ -1905,7 +2261,7 @@ cSIR_stimes<-function(T,lo,s)
 cSIR_getTstats<-function(tr_list1, tr_list2, mcmc.params)
 {
 	s1_1 <- cSIR_trstat1(tr_list1)
-  s1_2 <- cSIR_trstat1(tr_list2)
+    s1_2 <- cSIR_trstat1(tr_list2)
 	s2_1 <- diff(tr_list1$T[,1])
 	s2_2 <- diff(tr_list2$T[,1])
 	

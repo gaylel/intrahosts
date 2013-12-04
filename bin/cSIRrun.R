@@ -22,6 +22,7 @@ if (!is.null(opt$firstN))
   dat$info<-dat$info[opt$firstN] ;
 }
 
+opt$outdir <- outdir
 smp <- cSIR_runmcmc(seqs, dat, opt, init, mcp, hp)
 vars<-c("mr","dr","B","ll","tr")
 for (i in seq(1,length(vars)))
@@ -29,6 +30,11 @@ for (i in seq(1,length(vars)))
 	assign(vars[i],smp[[vars[i]]])
 	save(list=vars[i],file=paste(outdir,"/",vars[i],".mcmc",sep="")) ;
 }
+if (mcmc.params$acc.rate==1)
+{
+  acc_rate <- smp$acc.rate
+  save(acc_rate, file=paste(outdir,"/acc_rate.mcmc",sep=""))
+}  
 warnings()
 #q()
 

@@ -9,14 +9,16 @@
 #include "leaf.h"
 
 SEXP sample_cSIR_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr) ;
-SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN) ;
+SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN, SEXP R_bnprob) ;
 void cSIR_iter(int n, int nS, int NHosts, double *B, double dr, int **p1, double **p2) ;
-void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN) ;
+void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN, int * bnsizes) ;
 void cSIR_iters(int *n, int I0, int nS, int NHosts, double *B, double dr, int **p1, double **p2) ;
-void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN) ;
+void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN, double bnprob) ;
 int check_infectives(int *I, int NHosts, int t) ;
 int check_sampled(double *ST, int NHosts, double t_n, double t_n1 ) ;
 SEXP tree_reconstruct(SEXP R_sir, SEXP R_NHosts, SEXP R_dat) ;
+SEXP tree_reconstruct_old(SEXP R_sir, SEXP R_NHosts, SEXP R_dat) ;
+void bnsizeupdate(int * bnsizes, int NHosts, int opt, int * opt_val, double opt_val2) ;
 
 
 struct hnode {
@@ -91,12 +93,12 @@ SEXP sample_cSIR_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr)
 }
 
 
-SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN)
+SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN, SEXP R_bnprob)
 {
 	
 	int I0, NS, NHosts, *S, *I, *T, *R, **p_RVAL1 = Calloc(3,int*),*n=Calloc(1,int),i,j;
 	int *PR_I, *PR_S, *PR_Iend, *SN;
-	double *B, **p_RVAL2 = Calloc(1,double*), dr, *PR_T, *ST ;
+	double *B, **p_RVAL2 = Calloc(1,double*), dr, *PR_T, *ST, bnprob ;
 	
 	
 	SEXP R_Bdim, R_I, R_T, R_S, R_Iend, R_list ;
@@ -106,6 +108,9 @@ SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, S
 	
 	// number of particles in each host	
 	R_NS = coerceVector(R_NS, INTSXP) ;
+  
+  // parameters for bottleneck size
+  R_bnprob = coerceVector(R_bnprob, REALSXP) ;
 	
 	// number of hosts
 	R_NHosts = coerceVector(R_NHosts, INTSXP) ;
@@ -125,6 +130,7 @@ SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, S
 	
 	I0 = INTEGER(R_I0)[0] ;
 	NS = INTEGER(R_NS)[0] ;
+  bnprob = REAL(R_bnprob)[0] ;
 	NHosts = INTEGER(R_NHosts)[0] ;
 	B = REAL(R_B) ;
 	dr = REAL(R_dr)[0] ;
@@ -136,7 +142,7 @@ SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, S
 	n[0]=0 ;
 	
 	//cSIR_iters(n, I0, NS, NHosts, B, dr, p_RVAL1, p_RVAL2) ;
-	cSIR_iters_ST(n, I0, NS, NHosts, B, dr, p_RVAL1, p_RVAL2, ST, SN) ;
+	cSIR_iters_ST(n, I0, NS, NHosts, B, dr, p_RVAL1, p_RVAL2, ST, SN, bnprob) ;
 	
 	PROTECT(R_I=allocMatrix(INTSXP,n[0],NHosts)) ;
 	PROTECT(R_S=allocMatrix(INTSXP,n[0],NHosts)) ;
@@ -189,10 +195,11 @@ SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, S
 //	double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)	
 //}
 
-SEXP tree_reconstruct(SEXP R_sir, SEXP R_NHosts, SEXP R_dat)
+SEXP tree_reconstruct_old(SEXP R_sir, SEXP R_NHosts, SEXP R_dat)
 {
 	int *PR_I, *PR_S, *PR_Iend, *SN, NHosts, i, j, k,st=0, st2=-1, TN, ha, hb, *Tend, *NNodes, *minNodes, mn, r1, r2, *ch, ntips=0, ei, intNode;
-	double *PR_T, ***PR_T2, *ST, *PR_bt, **bt ;
+  int bn ;
+  double *PR_T, ***PR_T2, *ST, *PR_bt, **bt ;
 	phylo *tr ;
 	item_i * tst ;
 	
@@ -345,57 +352,55 @@ SEXP tree_reconstruct(SEXP R_sir, SEXP R_NHosts, SEXP R_dat)
 			} 
 			// need to update minnodes
 			
-			if ((int) *PR_T2[3][i] == 1 )
+			if ((int) *PR_T2[3][i] > 0 )
 			{
-				// birth (coalescent event)
-				if (ha == hb)
-				{
-					//Rprintf("%i\n",2) ;
-					// sampling without replacement
-					r1 = rand() % NNodes[ha] ;
-					r2 = rand() % (NNodes[ha] - 1) ;
-					r2 = (r2>=r1) ? r2+1 : r2 ;
-					//Rprintf("r1,r2 %i,%i",r1,r2) ;
-					ch[0] = llist_get_el_i(r1, Nodes[ha].n) ;
-					ch[1] = llist_get_el_i(r2, Nodes[hb].n) ;
-					//Rprintf("r1,r2 %i,%i",ch[0],ch[1]) ;
-					
-					
-				}
-				else{
-					//Rprintf("%i\n",3) ;
-					r1 = rand() % NNodes[ha] ;
-					r2 = rand() % NNodes[hb] ;
-					ch[0]=(NNodes[ha]>1) ? llist_get_el_i(r1, Nodes[ha].n) :  llist_get_el_i(0, Nodes[ha].n);
-					ch[1]=(NNodes[hb]>1) ? llist_get_el_i(r2, Nodes[hb].n) :  llist_get_el_i(0, Nodes[hb].n);
-					
-				}
-				
-				// check for extinct nodes.
-				if (ch[1] < 0)
-				{
-					Nodes[hb].n = llist_delete_el_i(r2, Nodes[hb].n) ;
-					Nodes[hb].t = llist_delete_el_d(r2, Nodes[hb].t) ;
-					minNodes[hb] = (ch[1]==minNodes[hb]) ? llist_min(Nodes[hb].n) : minNodes[hb] ; 
-					NNodes[hb]-- ;
-				}
-				else{
-					if (ch[0] < 0)
-					{
-						// move node from hb into ha.
-						Nodes[ha].n = llist_delete_el_i(r1, Nodes[ha].n) ;
-						Nodes[ha].t = llist_delete_el_d(r1, Nodes[ha].t) ;
-						r2 = llist_get_ind_i(ch[1], Nodes[hb].n) ;
-						Nodes[ha].n = llist_add_el_i(ch[1], Nodes[ha].n) ;
-						Nodes[ha].t = llist_add_el_d(llist_get_el_d(r2, Nodes[hb].t), Nodes[ha].t) ;
-						
-						Nodes[hb].n = llist_delete_el_i(r2, Nodes[hb].n) ;
-						Nodes[hb].t = llist_delete_el_d(r2, Nodes[hb].t) ;
-						//minNodes[ha] = llist_min(Nodes[ha].n) ;  
-						minNodes[hb] = llist_min(Nodes[hb].n) ; 
-						NNodes[hb]--;
-					}
-					else{
+        for (bn=0 ; bn < (int)*PR_T2[3][i] ; bn++)
+        {
+          // birth (coalescent event)
+          // choose  children
+  			  if (ha == hb)
+				  {
+					  //Rprintf("%i\n",2) ;
+					  // sampling without replacement
+					  r1 = rand() % NNodes[ha] ;
+					  r2 = rand() % (NNodes[ha] - 1) ;
+					  r2 = (r2>=r1) ? r2+1 : r2 ;
+					  //Rprintf("r1,r2 %i,%i",r1,r2) ;
+					  ch[0] = llist_get_el_i(r1, Nodes[ha].n) ;
+					  ch[1] = llist_get_el_i(r2, Nodes[hb].n) ;
+					  //Rprintf("r1,r2 %i,%i",ch[0],ch[1]) ;
+				  }
+				  else{
+					  //Rprintf("%i\n",3) ;
+					  r1 = rand() % NNodes[ha] ;
+					  r2 = rand() % NNodes[hb] ;
+					  ch[0]=(NNodes[ha]>1) ? llist_get_el_i(r1, Nodes[ha].n) :  llist_get_el_i(0, Nodes[ha].n);
+					  ch[1]=(NNodes[hb]>1) ? llist_get_el_i(r2, Nodes[hb].n) :  llist_get_el_i(0, Nodes[hb].n);
+				  }
+				  // check for extinct nodes.
+				  if (ch[1] < 0) // -
+				  {
+					  Nodes[hb].n = llist_delete_el_i(r2, Nodes[hb].n) ;
+					  Nodes[hb].t = llist_delete_el_d(r2, Nodes[hb].t) ;
+					  minNodes[hb] = (ch[1]==minNodes[hb]) ? llist_min(Nodes[hb].n) : minNodes[hb] ; 
+					  NNodes[hb]-- ;
+				  }
+				  else{
+					  if (ch[0] < 0) // +-
+					  {
+						  // move node from hb into ha.
+						  Nodes[ha].n = llist_delete_el_i(r1, Nodes[ha].n) ;
+						  Nodes[ha].t = llist_delete_el_d(r1, Nodes[ha].t) ;
+						  r2 = llist_get_ind_i(ch[1], Nodes[hb].n) ;
+						  Nodes[ha].n = llist_add_el_i(ch[1], Nodes[ha].n) ;
+						  Nodes[ha].t = llist_add_el_d(llist_get_el_d(r2, Nodes[hb].t), Nodes[ha].t) ;
+						  Nodes[hb].n = llist_delete_el_i(r2, Nodes[hb].n) ;
+						  Nodes[hb].t = llist_delete_el_d(r2, Nodes[hb].t) ;
+						  //minNodes[ha] = llist_min(Nodes[ha].n) ;  
+						  minNodes[hb] = llist_min(Nodes[hb].n) ; 
+						  NNodes[hb]--;
+					  }
+					  else{ //++
 						// coalescent event
 						// create pair of edges with new internal node.
 						tr->edge[ei][0] = intNode ;
@@ -424,7 +429,9 @@ SEXP tree_reconstruct(SEXP R_sir, SEXP R_NHosts, SEXP R_dat)
 						NNodes[hb]-- ;
 						intNode -- ;
 					}
-				}
+				  }  
+        }
+				
 			}
 		}
 	}
@@ -470,6 +477,302 @@ SEXP tree_reconstruct(SEXP R_sir, SEXP R_NHosts, SEXP R_dat)
 	free(minNodes) ;
 	free(ch) ;
 	free(PR_T2) ;
+	return R_List;
+}
+
+SEXP tree_reconstruct(SEXP R_sir, SEXP R_NHosts, SEXP R_dat)
+{
+  int *PR_I, *PR_S, *PR_Iend, *SN, NHosts, i, j, k,st=0, st2=-1, TN, ha, hb, *Tend, *NNodes, *minNodes, mn, r1, r2, *ch, ntips=0, ei, intNode;
+  int bn , *SNsum, m;
+  double *PR_T, ***PR_T2, *ST, *PR_bt, **bt ;
+	phylo *tr ;
+	item_i * tst ;
+	
+	SEXP R_ST, R_SN, R_Tdim, R_tr, R_T, R_List, R_bt ;
+	hnode *Nodes ;
+	R_NHosts = coerceVector(R_NHosts, INTSXP) ;
+	NHosts = INTEGER(R_NHosts)[0] ;
+	R_Tdim = getAttrib(VECTOR_ELT(R_sir,2), R_DimSymbol) ;
+	
+	TN = INTEGER(R_Tdim)[0] ;
+	//Rprintf("dims = %i, %i\n",INTEGER(R_Tdim)[0], INTEGER(R_Tdim)[1]) ;
+	
+	PR_I = INTEGER(VECTOR_ELT(R_sir,0)) ;
+	PR_S = INTEGER(VECTOR_ELT(R_sir,1)) ;	
+	PR_T = REAL(coerceVector(VECTOR_ELT(R_sir,2),REALSXP)) ;	
+	PR_Iend = INTEGER(VECTOR_ELT(R_sir,3)) ;
+
+	R_SN = VECTOR_ELT(R_dat,0) ;
+	R_ST = VECTOR_ELT(R_dat,1) ;
+	R_ST = coerceVector(R_ST, REALSXP) ;
+	R_SN = coerceVector(R_SN, INTSXP) ;
+	ST = REAL(R_ST) ;
+	SN = INTEGER(R_SN) ;
+	SNsum = calloc(NHosts, sizeof(int)) ;
+	for (i=0 ; i<NHosts ; i++)
+	{
+		ntips+= SN[i] ;
+	}
+	
+	Nodes = Calloc(NHosts,hnode) ; 
+	Tend = Calloc(NHosts,int) ;
+	NNodes = Calloc(NHosts,int) ;
+	minNodes = Calloc(NHosts,int) ;
+	ch = Calloc(2,int) ;
+	tr=phylo_create(ntips) ;
+	ei = tr->Nedge - 1 ;
+	intNode = 2*tr->NNode  ;
+	
+	PR_T2 = Calloc(4,double**) ;
+	k=0 ;
+	for (j=0 ; j<4 ; j++)
+	{
+		PR_T2[j] = Calloc(TN,double*) ;
+	
+		for (i=0 ; i<TN ; i++)
+		{	
+		 	PR_T2[j][i] = &PR_T[k++];
+			//Rprintf("%8.4f, ",*PR_T2[j][i]) ; 	
+			
+		}
+		
+	}
+	
+	
+	
+  j = 0;
+  
+  // maybe still some infected left at end:
+  
+	for (i=0 ; i<NHosts ; i++)
+	{
+		Nodes[i].t = NULL ;
+		Nodes[i].n = NULL ;
+    NNodes[i] = 0 ;
+    minNodes[i] = 0 ;
+    SNsum[i] = SN[i] + j ;
+    j+= SN[i] ;
+    st2 = -1 ;
+    //Rprintf("Iend in host[%i] = %i\n", i, PR_I[TN * (i+1) - 1]) ;
+    for (k=0 ; k< PR_I[TN * (i+1) - 1] ; k++)
+    {
+  	    Nodes[i].n = llist_add_el_i(st2, Nodes[i].n) ;
+			  Nodes[i].t = llist_add_el_d(ST[NHosts - 1], Nodes[i].t) ;
+			  //Rprintf("Nodes i %i, ", (Nodes[i].n)->val) ;	
+        NNodes[i]++ ;
+			  st2-- ;
+		  
+		    minNodes[i] -- ;         
+    }
+	}
+
+// Rprintf("Nodes 0 %i, ", (Nodes[0].n)->val) ;
+	// Find last time point for each host
+	for (i=0 ; i< TN ; i++)
+	{
+		ha = (int) *PR_T2[1][i] - 1;
+		hb = (int) *PR_T2[2][i] - 1;
+		if (ha == hb && (*PR_T2[0][i] <= ST[ha]))
+		{
+			Tend[ha] = i ; 
+		}
+	}
+	
+  
+	for (i=TN-1 ; i>-1 ; i--)
+	{
+    // for each event get hosts
+		ha = (int) *PR_T2[1][i] - 1;
+		hb = (int) *PR_T2[2][i] - 1;
+   
+    // if terminal event
+   
+    if (i==Tend[ha])
+    {
+      
+      st = (ha>0 ? SNsum[ha-1] : 0) ;
+      //NNodes[ha] += -*PR_T2[3][i] ;
+      st2 = minNodes[ha] - 1;
+		  //Rprintf("Nodes in host %i are ", ha) ;
+      for (j=0 ; j<SN[ha] ; j++)
+		  {
+			  Nodes[ha].n = llist_add_el_i(st, Nodes[ha].n) ;
+			  Nodes[ha].t = llist_add_el_d(ST[ha], Nodes[ha].t) ;
+			  NNodes[ha]++ ;
+       //Rprintf("%i, ",st) ;
+			  st++ ;	
+		  }
+		  for (j=SN[ha] ; j< -*PR_T2[3][i] ; j++)
+		  {
+			  //Rprintf("%i, ",st2) ;
+        Nodes[ha].n = llist_add_el_i(st2, Nodes[ha].n) ;
+			  Nodes[ha].t = llist_add_el_d(ST[ha], Nodes[ha].t) ;
+			  //Rprintf("Nodes i %i, ", (Nodes[i].n)->val) ;	
+        NNodes[ha]++ ;
+			  st2=st2-1 ;
+		  }
+		  //Rprintf("\n") ;
+		  if (SN[ha]< -*PR_T2[3][i])
+		  {
+			  minNodes[ha] = st2+1 ;  
+		  }   
+      
+     
+    }
+    else
+		{
+       
+			if ((int) *PR_T2[3][i] == -1 )
+			{
+				// death but birth in reverse.
+				//Rprintf("%i\n",1) ;
+				// minnode
+        mn = (NNodes[ha]==0) ? 0 : minNodes[ha] ;
+				if (mn<= -1) 
+				{
+					mn=mn-1 ;
+				}
+				else
+				{
+					mn= -1 ;
+				}
+				// add new node
+				Nodes[ha].n = llist_add_el_i(mn, Nodes[ha].n) ;
+				Nodes[ha].t = llist_add_el_d(*PR_T2[0][i], Nodes[ha].t) ;
+				NNodes[ha]++ ;
+				minNodes[ha] = mn ;
+			} 
+			
+			if ((int) *PR_T2[3][i] > 0 )
+			{
+        for (bn=0 ; bn < (int)*PR_T2[3][i] ; bn++)
+        {
+          // birth (coalescent event)
+          // choose  children
+  			  if (ha == hb)
+				  {
+            //Rprintf("got here\n" ) ;  
+					  //Rprintf("%i\n",2) ;
+					  // sampling without replacement
+					  r1 = rand() % NNodes[ha] ;
+					  r2 = rand() % (NNodes[ha] - 1) ;
+					  r2 = (r2>=r1) ? r2+1 : r2 ;
+					 // Rprintf("r1,r2 %i,%i",r1,r2) ;
+					  ch[0] = llist_get_el_i(r1, Nodes[ha].n) ;
+					  ch[1] = llist_get_el_i(r2, Nodes[hb].n) ;
+					  //Rprintf("r1,r2 %i,%i",ch[0],ch[1]) ;
+            
+        
+				  }
+				  else{
+					  //Rprintf("%i\n",3) ;
+					  r1 = rand() % NNodes[ha] ;
+					  r2 = rand() % NNodes[hb] ;
+					  ch[0]=(NNodes[ha]>1) ? llist_get_el_i(r1, Nodes[ha].n) :  llist_get_el_i(0, Nodes[ha].n);
+					  ch[1]=(NNodes[hb]>1) ? llist_get_el_i(r2, Nodes[hb].n) :  llist_get_el_i(0, Nodes[hb].n);
+				  }
+          
+				  // check for extinct nodes.
+				  if (ch[1] < 0) // -
+				  {
+					  Nodes[hb].n = llist_delete_el_i(r2, Nodes[hb].n) ;
+					  Nodes[hb].t = llist_delete_el_d(r2, Nodes[hb].t) ;
+					  minNodes[hb] = (ch[1]==minNodes[hb]) ? llist_min(Nodes[hb].n) : minNodes[hb] ; 
+					  NNodes[hb]-- ;
+				  }
+				  else{
+					  if (ch[0] < 0) // +-
+					  {
+						  // move node from hb into ha.
+						  Nodes[ha].n = llist_delete_el_i(r1, Nodes[ha].n) ;
+						  Nodes[ha].t = llist_delete_el_d(r1, Nodes[ha].t) ;
+						  r2 = llist_get_ind_i(ch[1], Nodes[hb].n) ;
+						  Nodes[ha].n = llist_add_el_i(ch[1], Nodes[ha].n) ;
+						  Nodes[ha].t = llist_add_el_d(llist_get_el_d(r2, Nodes[hb].t), Nodes[ha].t) ;
+						  Nodes[hb].n = llist_delete_el_i(r2, Nodes[hb].n) ;
+						  Nodes[hb].t = llist_delete_el_d(r2, Nodes[hb].t) ;
+						  //minNodes[ha] = llist_min(Nodes[ha].n) ;  
+						  minNodes[hb] = llist_min(Nodes[hb].n) ; 
+						  NNodes[hb]--;
+					  }
+					  else{ //++
+						// coalescent event
+						// create pair of edges with new internal node.
+						tr->edge[ei][0] = intNode ;
+						tr->edge[ei][1] = ch[0] ;
+						tr->el[ei] = llist_get_el_d(r1, Nodes[ha].t) - *PR_T2[0][i] ;
+						//Rprintf("event %i %i %8.4f %8.4f %8.4f\n",intNode, ch[0], llist_get_el_d(r1, Nodes[ha].t), *PR_T2[0][i], tr->el[ei]) ;
+						ei--;
+						tr->edge[ei][0] = intNode ;
+						tr->edge[ei][1] = ch[1] ; 
+						tr->el[ei] = llist_get_el_d(r2, Nodes[hb].t) - *PR_T2[0][i] ;
+						//Rprintf("event %i %i %8.4f %8.4f %8.4f\n",intNode, ch[1],llist_get_el_d(r2, Nodes[hb].t), *PR_T2[0][i], tr->el[ei]) ;
+						ei--;
+						tr->nodelabel[intNode-ntips] = ha ;
+						
+					
+						
+						Nodes[ha].n = llist_delete_el_i(r1, Nodes[ha].n) ;
+						Nodes[ha].t = llist_delete_el_d(r1, Nodes[ha].t) ;
+						r2 = llist_get_ind_i(ch[1], Nodes[hb].n) ;
+						Nodes[hb].n = llist_delete_el_i(r2, Nodes[hb].n) ;
+						Nodes[hb].t = llist_delete_el_d(r2, Nodes[hb].t) ;
+						Nodes[ha].n = llist_add_el_i(intNode, Nodes[ha].n) ;
+						Nodes[ha].t = llist_add_el_d(*PR_T2[0][i], Nodes[ha].t) ;
+						minNodes[hb] = llist_min(Nodes[hb].n) ; 
+						minNodes[ha] = llist_min(Nodes[ha].n) ; 
+						NNodes[hb]-- ;
+						intNode -- ;
+					}
+				  }  
+        }
+				
+			}
+		}
+	}
+	PROTECT(R_List = allocVector(VECSXP ,2)) ;
+	PROTECT(R_bt=allocMatrix(REALSXP,tr->NNode,4)) ;
+	PR_bt = REAL(R_bt) ;
+	bt = phylo_bt(tr, ST, SN, NHosts) ;
+	for (j=0 ; j<tr->NNode ; j++)
+	{
+		for (i=0;i<4;i++)
+		{
+			PR_bt[j+i*tr->NNode]=(i>0) ? (bt[j][i] + 1) : bt[j][i] ;
+			
+		}
+	}
+	R_tr = phylo_to_R(tr) ;
+	SET_VECTOR_ELT(R_List, 0, R_tr) ;
+	SET_VECTOR_ELT(R_List, 1, R_bt) ;
+	UNPROTECT(2) ;
+	
+	for (j= 0; j< 4 ; j++)
+	{
+	
+			free(PR_T2[j]) ;
+		
+	}
+	
+	for (j=0 ; j<tr->NNode ; j++)
+	{
+		Free(bt[j]) ;
+		
+	}
+	Free(bt) ;
+	
+	for (j=0 ; j<NHosts ; j++)
+	{
+		llist_destroy_i(Nodes[j].n)  ;
+		llist_destroy_d(Nodes[j].t)  ;
+	}
+	free(Nodes) ; 
+	free(Tend) ;  
+	free(NNodes) ;
+	free(minNodes) ;
+	free(ch) ;
+	free(PR_T2) ;
+  free(SNsum) ;
 	return R_List;
 }
 
@@ -539,10 +842,37 @@ void cSIR_iters(int *n, int I0, int nS, int NHosts, double *B, double dr, int **
 	n[0]=i	;
 }
 
-void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN)
+void bnsizeupdate(int * bnsizes, int NHosts, int opt, int * opt_val, double opt_val2)
 {
-	int **pp1,i,ot=0;
+  int i ;
+  switch (opt)
+  {
+    case 0: 
+    {
+      // bnsize of opt_val ;
+      for (i=0 ; i<NHosts ; i++)
+      {
+        bnsizes[i] = opt_val[0] ;
+      }
+    }
+    case 1:
+    {
+      for (i=0 ; i<NHosts ; i++)
+      {
+        bnsizes[i] = (int) rbinom((double) opt_val[i], opt_val2) ;
+        
+      }
+    }
+  }
+  
+  
+}
+
+void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN, double bnprob)
+{
+	int **pp1,i,ot=0, *bnsizes, opt=1;
 	double **pp2,tmax=-1 ;
+  bnsizes = calloc(NHosts, sizeof(int)) ;
 	for (i=0 ; i<NHosts; i++)
 	{
 	 if (tmax<ST[i]) tmax = ST[i] ;
@@ -569,11 +899,14 @@ void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int
 	i=1 ;
 	n[0]=1 ;
 	
+  
 	//while (check_infectives(pp1[1],NHosts,n[0]-1)==0 && n[0]<100 && ot==0)
 	while (check_infectives(pp1[1],NHosts,n[0]-1)==0 && ot==0)
 	{
-		cSIR_iter_ST(n, nS, NHosts, B, dr, pp1, pp2, ST, SN) ;
-		
+    bnsizeupdate(bnsizes, NHosts, opt, &pp1[1][(n[0]-1)*NHosts], bnprob) ;
+   
+		cSIR_iter_ST(n, nS, NHosts, B, dr, pp1, pp2, ST, SN, bnsizes) ;
+
 		if (pp2[0][(n[0])*4]>tmax) ot=1 ;
 		
 		//cSIR_iter(i, nS, NHosts, B, dr, pp1, pp2) ;
@@ -589,19 +922,81 @@ void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int
 	pp1[2]=0;
 	pp2[0]=0;
 	n[0]--	;
+  free(bnsizes) ;
 }
 
-
-void cSIR_time_samples(double *tpts)
+/*
+int getindofhostpair(int **bh, int ha, int hb, int N)
 {
-	// sample at 
+  int i, found=0, ind=-1;
+  while ( i< N && found==0 )
+  {
+    if ((bh[i][0] == ha && bh[i][1] == hb) || (bh[i][1] == ha && bh[i][0] == hb))
+    {
+      found = 1 ;
+      ind = i ;
+    }
+    i++ ;
+  }
+  return(ind) ;
 }
+
+void cSIR_time_samples(double *tpts, int *lo, int *lo_h, int *s, int ntips, int Ntpt)
+{
+	// find topology given new sample and current topology
+  int i, ha, hb, ind ;
+  int *l , **bh, *lo_new, *s_new, *h;
+  
+  // initialisation
+  
+  // ordered matrix of coalescent events (most recent first)
+  bh = calloc((ntips-1), sizeof(int *)) ;
+  for (i=0 ; i < (ntips-1) ; i++)
+  {
+    bh[i] = calloc(3, sizeof(int)) ;
+    bh[i][0] = lo_h[s[i]] ;
+    bh[i][1] = lo_h[s[i] + 1] ;
+    bh[i][2] = s[i] ;
+  }
+  
+  h = calloc(ntips, sizeof(int)) ;
+  for (i=0 ; )
+  
+  lo_new = calloc(ntips, sizeof(int)) ;
+  s_new = calloc(ntips - 1, sizeof(int)) ;
+  
+  
+  for (i=Ntpt-1 ; i>=0 ; i--)
+  {
+    // find hosts of coalescent event
+    ha = tpts[2*Ntpt + i] ;
+    hb = tpts[3*Ntpt + i] ;
+    
+    // find first corresponding event in current structure
+    ind = getindofhostpair(bh, ha, hb, ntips-1) ;
+    if (ind >= 0)
+    {
+      // if exists
+      s_new[Ntpt - 1 -i] = bh[ind,2]
+    }else{
+      
+    }
+    
+  }
+}
+*/
 
 void cSIR_iter(int n, int nS, int NHosts, double *B, double dr, int **p1, double **p2)
 {
+  /********
+  Returns SIR trajectory
+  
+  
+  *********/
+  
 	double *R, sumR=0, t_n, Rtot, *T, rand_e;	// rate matrix
 	R = Calloc(NHosts * (NHosts+1),double) ;
-	int i,j,e,ec,er, *S, *I;
+	int i,j,e,ec,er, *S, *I, In, Sn, np;
 	
 	S=p1[0];
 	I=p1[1];
@@ -609,12 +1004,15 @@ void cSIR_iter(int n, int nS, int NHosts, double *B, double dr, int **p1, double
 	
 	for (i=0; i<NHosts; i++)
 	{
+    // death rates
 		R[i + NHosts*NHosts]=I[(n-1)*NHosts + i]*dr ;
 		sumR+= R[i + NHosts*NHosts] ;
-		
 		for (j=0; j<NHosts; j++)
 		{
-			R[i*NHosts + j]=I[(n-1)*NHosts + j]*S[(n-1)*NHosts + i]*B[i*NHosts + j]/(double)(nS) ;
+      In = I[(n-1)*NHosts + j] ;
+      Sn = S[(n-1)*NHosts + i] ;
+			
+      R[i*NHosts + j] = In * Sn * B[i * NHosts + j]/(double)(nS) ;
 			sumR+= R[i*NHosts + j] ;
 		}
 	}
@@ -664,9 +1062,10 @@ void cSIR_iter(int n, int nS, int NHosts, double *B, double dr, int **p1, double
 	}
 	else
 	{
-		I[n*NHosts + ec] = I[n*NHosts + ec] + 1;
-		S[n*NHosts + ec] = S[n*NHosts + ec] - 1;
-		T[n*4+3] = 1.0 ;
+    np = 1 ;
+		I[n*NHosts + ec] = I[n*NHosts + ec] + np;
+		S[n*NHosts + ec] = S[n*NHosts + ec] - np;
+		T[n*4+3] = np ;
 		T[n*4+1] = er ;
 		T[n*4+2] = ec ;
 	}
@@ -679,12 +1078,12 @@ void cSIR_iter(int n, int nS, int NHosts, double *B, double dr, int **p1, double
 	T=0;
 }
 
-void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN)
+void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN, int * bnsizes)
 {
 	double *R, sumR=0, t_n, Rtot, *T, rand_e, *ST2, T_n, t_n1;	// rate matrix
 	R = Calloc(NHosts * (NHosts+1),double) ;
 	ST2 = Calloc(NHosts,double) ;
-	int i,j,e,ec,er, *S, *I, *Iend, n, h_i;
+	int i, j,e,ec,er, *S, *I, *Iend, n, h_i, In, Sn, bn, bnsize, all_out=0;
 	
 	S=p1[0];
 	I=p1[1];
@@ -700,9 +1099,19 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 		
 		for (j=0; j<NHosts; j++)
 		{
-			R[i*NHosts + j]=I[(n-1)*NHosts + j]*S[(n-1)*NHosts + i]*B[i*NHosts + j]/(double)(nS) ;
+      In = I[(n-1)*NHosts + j] ;
+      Sn = S[(n-1)*NHosts + i] ;
+      //Rprintf("%i\t",In) ;
+  		if (i!=j)
+      {
+        bnsize = bnsizes[j] ;
+        In = (In >= bnsize) ? In : 0 ;
+        Sn = (Sn >= bnsize) ? Sn : 0 ;
+      }
+      R[i*NHosts + j] = In * Sn * B[i * NHosts + j]/(double)(nS) ;
+		
 			sumR+= R[i*NHosts + j] ;
-			//Rprintf("%8.4f\t",R[i*NHosts+j]) ;
+			
 		}
 		//Rprintf("\n") ;
 	}
@@ -744,11 +1153,25 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 				S[i+(n*NHosts)] = S[i+((n-1)*NHosts)] ;
 				I[i+(n*NHosts)] = I[i+((n-1)*NHosts)] ;		
 			}
-			I[h_i+(n*NHosts)] = 0 ;
-			S[h_i+(n*NHosts)] = 0 ;
-			T[n*4+3] = - I[h_i+((n-1)*NHosts)];
-			Iend[h_i] = I[h_i+((n-1)*NHosts)]; 
-			T[n*4+1] = h_i ;
+			//
+			if (all_out==0)
+      {
+        //Iend[h_i] = I[h_i+(n*NHosts)] >= SN[h_i] ? SN[h_i] :  I[h_i+(n*NHosts)] ;
+        Iend[h_i] = I[h_i+(n*NHosts)] ;
+        I[h_i+(n*NHosts)] = I[h_i+(n*NHosts)] - SN[h_i] ;
+        I[h_i+(n*NHosts)] = I[h_i+(n*NHosts)] > 0 ? I[h_i+(n*NHosts)] : 0 ;
+        //S[h_i+(n*NHosts)] = 0 ;
+        S[h_i+(n*NHosts)] = S[h_i+(n*NHosts)] ;
+			  //T[n*4+3] = - I[h_i+((n-1)*NHosts)];
+			  T[n*4+3] = - SN[h_i];
+      }else{
+        I[h_i+(n*NHosts)] = 0 ;
+        S[h_i+(n*NHosts)] = 0 ;
+        T[n*4+3] = - I[h_i+((n-1)*NHosts)];
+			  Iend[h_i] = I[h_i+((n-1)*NHosts)]; 
+      }
+			
+      T[n*4+1] = h_i ;
 			T[n*4+2] = h_i ;	
 			T[n*4] = ST[h_i] ;		
 					
@@ -768,7 +1191,16 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 		
 		for (j=0; j<NHosts; j++)
 		{
-			R[i*NHosts + j]=I[(n-1)*NHosts + j]*S[(n-1)*NHosts + i]*B[i*NHosts + j]/(double)(nS) ;
+      In = I[(n-1)*NHosts + j] ;
+      Sn = S[(n-1)*NHosts + i] ;
+    	if (i!=j)
+      {
+        bnsize = bnsizes[j] ;
+        In = (In >= bnsize) ? In : 0 ;
+        Sn = (Sn >= bnsize) ? Sn : 0 ;
+      }
+      R[i*NHosts + j] = In * Sn * B[i * NHosts + j]/(double)(nS) ;
+			
 			sumR+= R[i*NHosts + j] ;
 		}
 	}
@@ -827,9 +1259,11 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 		}
 		else
 		{
-			I[n*NHosts + ec] = I[n*NHosts + ec] + 1;
-			S[n*NHosts + ec] = S[n*NHosts + ec] - 1;
-			T[n*4+3] = 1.0 ;
+      bnsize = bnsizes[er] ;
+      bn = (ec==er) ? 1 : bnsize ;
+			I[n*NHosts + ec] = I[n*NHosts + ec] + bn;
+			S[n*NHosts + ec] = S[n*NHosts + ec] - bn;
+			T[n*4+3] = bn;
 			T[n*4+1] = er ;
 			T[n*4+2] = ec ;
 		}

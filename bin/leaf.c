@@ -34,7 +34,6 @@ struct leaf* R_to_leaf(SEXP R_lo, SEXP R_s)
 	return l ;
 }
 
-
 struct leaf* leaf_update(double **T, leaf *l)
 {
 	// update leaves based on new branching times and host-host transmission
