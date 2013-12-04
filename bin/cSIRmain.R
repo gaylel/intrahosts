@@ -1724,7 +1724,7 @@ cSIR_Bupdate<-function(params, dat.params, dat, hp.params, mcmc.params)
   if (tr_list$is.acc == 1)
   {
     tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
-    print(tstats)
+    #print(tstats)
     th <- mcmc.params$abc$th
     if (tstats$d1<th & tstats$d2<th)
     {
