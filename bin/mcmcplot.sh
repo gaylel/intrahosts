@@ -4,4 +4,5 @@
 
 smpdir=$1
 outdir=$smpdir
-R --slave --vanilla --args $smpdir $outdir  < mcmcplot.R
+paramfile=$smpdir/test.params
+R --slave --vanilla --args $smpdir $outdir $paramfile  < mcmcplot.R

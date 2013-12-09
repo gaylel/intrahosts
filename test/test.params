@@ -2,10 +2,10 @@
 init <- list(
   B=list(
     br1=2,
-    br2=0.001
+    br2=0.005
   ),
   dr=1,
-  mr=1e-3,
+  mr=1e-4,
   I0=1,
   NS=1000,
   bn=0.1,
@@ -81,7 +81,7 @@ mcp <- list(
     dens="norm",
     args=list(
       mean=0,
-      sd=0.01
+      sd=0.02
     )
   ),
   bn=list(
@@ -106,7 +106,7 @@ mcp <- list(
     )
   ),
   tr=list(
-    Ntries_sir=200
+    Ntries_sir=10
   ),
   abc=list(
     th=0.01
@@ -118,10 +118,11 @@ mcp <- list(
 # program options
 opt<-list(
   checkinit=0,
-  chainvars=c("B","mr","tr", "dr","ll", "bn", "t_off"),
+  chainvars=c("B","mr","tr", "dr","ll", "bn", "t_off", "Itraj"),
   movevars= c("bn", "T", "T2", "dr",  "B", "mr", "t_off", "T3"),
   #movevars= c("T", "T2", "T3"),
   firstN=c(9,10,13,18),
+  #firstN=seq(2,6),
   seed=10000,
   saveevery=1000
 )

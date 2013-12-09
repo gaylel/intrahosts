@@ -30,7 +30,7 @@ for (i in seq(1,length(vars)))
 	assign(vars[i],smp[[vars[i]]])
 	save(list=vars[i],file=paste(outdir,"/",vars[i],".mcmc",sep="")) ;
 }
-if (mcmc.params$acc.rate==1)
+if (mcp$acc.rate==1)
 {
   acc_rate <- smp$acc.rate
   save(acc_rate, file=paste(outdir,"/acc_rate.mcmc",sep=""))

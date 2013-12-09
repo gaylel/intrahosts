@@ -899,9 +899,10 @@ cSIR_modelinit <- function(x, init, dat, dat.params, mcmc.params)
   print(trinit)
   llcur <- log(0)  
   params <- list(B=B, dr=dr, mr= mr, ll=llcur, Bcon=Bcon, tr_list=list(lo=trinit$lo, s=trinit$s), bn=init$bn, t_off=init$t_off, is.acc=0)
-
+  Ntries <- mcmc.params$tr$Ntries_sir
+  mcmc.params$tr$Ntries_sir <- 1000	
   tr_list <- cSIR_drawtr_list(params, dat.params, dat, mcmc.params$tr)
-  
+  mcmc.params$tr$Ntries_sir <- Ntries 
   params$tr_list <- tr_list
   params$is.acc <- tr_list$is.acc
   return(params)
@@ -1322,12 +1323,17 @@ cSIR_chainsupdate <- function(ch, chainvars, params)
   n <- length(ch[[1]])
   for (i in seq(1,length(chainvars)))
   {
-      if (chainvars[i]=="tr")
-      {
-        ch$tr[[n+1]] <- params$tr_list$tr 
-      }else{
-        ch[[chainvars[i]]][[n+1]] <- params[[chainvars[i]]]
-      }
+  	  switch(chainvars[i],
+  	  	"tr"={
+      	  	ch$tr[[n+1]] <- params$tr_list$tr 
+      	},
+      	"Itraj"={
+      		ch$Itraj[[n+1]] <- params$tr_list$Itraj
+      	},
+      	{
+        	ch[[chainvars[i]]][[n+1]] <- params[[chainvars[i]]]
+      	}
+      	)
   }
   return(ch)
 }
@@ -1514,7 +1520,7 @@ cSIR_drawtr_list <- function(params, dat.params, dat, mcmc.params)
     tr_list <- cSIR_trdraw2(sir, dat, dat.params)
 
     tr_list <- cSIR_trdraw3(tr_list$T, dat, params$tr_list)
-
+	tr_list$Itraj <- cSIR_Itraj(sir)
   }
 
   tr_list$is.acc <- sir$is.acc
@@ -1616,6 +1622,38 @@ cSIR_trdraw4 <- function()
   # get statistics of tree
   #tre$TS<-cSIR_getTstats(tre$T, NHosts)
   #tre$T<-diff(tre$T[,1])
+}
+
+cSIR_Itraj <- function(sir, N=100, Tmax=15)
+{
+  # Find average infected population sizes over time for each host
+  # Args:
+  #   sir: list of:
+  #     I:  infected size trajectory
+  #     S:  susceptible size trajectory
+  #     T:  matrix of events: T[i,]={time, from host, to host, [1=birth,-1=death]}
+  #     Iend: vector of infected size for each host at times ST  
+  #		N
+  #		Tmax
+  #     is.acc: 1=new sir sample accepted, 0= not accepted
+  # Returns:
+  #     
+  # get most recent time point
+  
+  T_end <- sir$T[nrow(sir$T),1]
+  
+  # transform time points to be relative to present
+  T <- sir$T[,1] - T_end
+  
+  # ti is the intervals
+  ti <- seq(-Tmax, 0, length.out=N+1)
+  Itraj <- matrix(0,nrow=length(ti),ncol=ncol(sir$I))
+  for (i in seq(1,ncol(sir$I)))
+  {
+  	ap <- approx(T, sir$I[,i], ti, method="constant")
+  	Itraj[,i] <- ap$y
+  }
+  return(Itraj)
 }
 
 cSIR_Tupdate<-function(x, params, dat.params, dat, hp.params, mcmc.params)

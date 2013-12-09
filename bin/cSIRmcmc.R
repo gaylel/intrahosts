@@ -19,7 +19,11 @@ mcmc_loadvar <- function(resdir, var, opt, mcp)
     smp <- NULL
     while (i*opt$saveevery < mcp$Niters)
     {
-      load(paste(resdir, "/", var, "_", format(i*opt$saveevery, scientific=FALSE), ".mcmc", sep=""))
+      z <- try(load(paste(resdir, "/", var, "_", format(i*opt$saveevery, scientific=FALSE), ".mcmc", sep="")))
+      if (class(z)=="try-error")
+      {
+      	z <- try(load(paste(resdir, "/", var, "_", format(i*opt$saveevery, scientific=TRUE), ".mcmc", sep="")))
+      }
       smp<-c(smp,eval(parse(text=var)))
       i <- i + 1
     }
