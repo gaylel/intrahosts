@@ -50,3 +50,28 @@ cSIRsim<-function(NHosts=3, N=1000, SN=c(10,10,10), ST=c(7,11,16), rootname="tes
 	return(list(tre=tre,params=params, dat.params=dat.params, dat=dat))
 }
 
+
+cSIRsimtree <- function(paramfile)
+{
+	source(paramfile)
+	x <- NULL
+	
+	# initialise sampling times and number of hosts.
+	set.seed(opt$seed)
+	NHosts <- length(dat$SN)
+	SN<-dat$SN 
+  	ST<-dat$ST 
+  	dat.params<-list(I0=init$I0, NS=init$NS, NHosts=length(SN))
+  	dat$STin = dat$ST - min(dat$ST)
+	params <- cSIR_modelinit(x, init, dat, dat.params, mcp)
+	params$tr_list$tr$tip.label <- NULL
+	params$tr_list$tr$node.label <- NULL
+	for (i in seq(1,NHosts))
+	{
+		params$tr_list$tr$tip.label <- c(params$tr_list$tr$tip.label, paste("H",i,"S",seq(1,SN[i]),sep="")) ;
+		
+	}
+	return(params)
+	
+}
+

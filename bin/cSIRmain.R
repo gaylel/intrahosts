@@ -222,7 +222,7 @@ cSIRfull_tree <- function(sir)
   # generate possible underlying tree (including extinctions)
   T <- sir$T
   Iend <- sir$Iend
-  print(Iend)
+  
   ntips <- -sum(T[which(T[,4] < 0),4]) + sum(sir$I[nrow(sir$I),])
   print(ntips)
   nT <- nrow(T)
@@ -892,7 +892,14 @@ cSIR_modelinit <- function(x, init, dat, dat.params, mcmc.params)
   print(ST)
   SN <- dat$SN
   Bcon <- cSIR_Bstruct(ST=ST) 
-  B <- cSIR_Binit(init, Bcon)
+  if (!is.matrix(init$B))
+  {
+  	B <- cSIR_Binit(init, Bcon)
+  }
+  else
+  {
+  	B <- init$B
+  }
   dr <- cSIR_drinit(init) 
   mr <- cSIR_mrinit(init) 
   trinit <- cSIR_trinit(init, x, dat)
@@ -1558,6 +1565,7 @@ cSIR_trdraw1 <- function(params, dat.params, dat, mcmc.params)
   {
     # draw SIR sample
     sir <- sample_cSIR_S_C(I0=I0, NS=NS, NHosts = NHosts, B=B, dr=dr, SN=dat$SN, ST=dat$ST, bnprob)
+    #print(sir$Iend)
     if (cSIR_eval(sir,dat$SN)>0)
     {
       # if accepted
@@ -2331,4 +2339,38 @@ cSIR_savesmps <- function(opt, smp)
     assign(vars[i],smp[[vars[i]]])
     save(list=vars[i],file=paste(outdir,"/",vars[i],".mcmc",sep="")) ;
   }  
+}
+
+cSIR_runmodel <- function(outdir, datadir, paramfile)
+{
+	
+	
+	source(paramfile)
+	set.seed(opt$seed)
+
+	# load in data
+	load(file=paste(datadir,"/dat.RData",sep="")) ;
+	load(file=paste(datadir,"/seqs.RData",sep="")) ;
+
+	if (!is.null(opt$firstN))
+	{
+  		dat$SN<-dat$SN[opt$firstN] ;
+  		dat$ST<-dat$ST[opt$firstN] ;
+  		dat$info<-dat$info[opt$firstN] ;
+	}
+
+	opt$outdir <- outdir
+	smp <- cSIR_runmcmc(seqs, dat, opt, init, mcp, hp)
+	vars<-c("mr","dr","B","ll","tr")
+	for (i in seq(1,length(vars)))
+	{
+		assign(vars[i],smp[[vars[i]]])
+		save(list=vars[i],file=paste(outdir,"/",vars[i],".mcmc",sep="")) ;
+	}
+	if (mcp$acc.rate==1)
+	{
+  		acc_rate <- smp$acc.rate
+  		save(acc_rate, file=paste(outdir,"/acc_rate.mcmc",sep=""))
+	}  
+	warnings()
 }

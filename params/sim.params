@@ -1,0 +1,141 @@
+h <- 10
+
+dat <- list(
+	SN=rep(50, h),
+	#ST=c(5,sample(seq(6,10),9,replace=TRUE))	
+	ST=seq(7,6+h)
+)
+
+# initialisation
+init <- list(
+  B=matrix(0,nrow=h,ncol=h),
+  dr=1,
+  mr=1e-4,
+  I0=1,
+  NS=1000,
+  bn=0.1,
+  t_off=7,
+  tr="random"
+)
+
+for (i in seq(1,h))
+{
+	init$B[i, i] <- 2
+	if (i + 1 <= h)
+		init$B[i, i+1] <-0.01
+	if (i + 2 <= h)
+		init$B[i, i+2] <-0.01
+}
+# hyperparams
+hp <- list(
+  B.br1=list(
+    dens="unif",
+    args=list(
+      min=1e-6,
+      max=100
+    )
+  ),
+  B.br2=list(
+    dens="unif",
+    args=list(
+      min=1e-6,
+      max=100
+    )
+
+  ),
+  mr=list(
+    dens="unif",
+    args=list(
+      min=1e-6,
+      max=100
+    )
+
+  ),
+  bn=list(
+    dens="unif",
+    args=list(
+      min=1e-6,
+      max=100
+    )
+
+  ),
+  dr=list(
+    dens="unif",
+    args=list(
+      min=1e-6,
+      max=100
+    )
+
+
+  ),
+  t_off=list(
+    dens="unif",
+    args=list(
+      min=1e-6,
+      max=100
+    )
+  ),
+  mut=list(
+    model="GTR"
+  )
+)
+
+# mcmc params
+mcp <- list(
+  B=list(
+    dens="norm",
+    args=list(
+      mean=0,
+      sd=0.01
+    ),
+    type=2
+  ),
+  mr=list(
+    dens="norm",
+    args=list(
+      mean=0,
+      sd=0.02
+    )
+  ),
+  bn=list(
+    dens="norm",
+    args=list(
+      mean=0,
+      sd=0.01
+    )
+  ),
+  dr=list(
+    dens="norm",
+    args=list(
+      mean=0,
+      sd=0.01
+    )
+  ),
+  t_off=list(
+    dens="norm",
+    args=list(
+      mean=0,
+      sd=0.01
+    )
+  ),
+  tr=list(
+    Ntries_sir=10
+  ),
+  abc=list(
+    th=0.01
+  ),
+  Niters=200000,
+  acc.rate=1
+)
+
+# program options
+opt<-list(
+  checkinit=0,
+  chainvars=c("B","mr","tr", "dr","ll", "bn", "t_off", "Itraj"),
+  movevars= c("bn", "T", "T2", "dr",  "B", "mr", "t_off", "T3"),
+  #movevars= c("T", "T2", "T3"),
+  firstN=c(9,10,13,18),
+  #firstN=seq(2,6),
+  seed=10000,
+  saveevery=1000
+)
