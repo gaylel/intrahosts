@@ -4,12 +4,13 @@ init <- list(
     br1=2,
     br2=0.005
   ),
-  dr=1,
+  dr=0.2,
   mr=1e-4,
   I0=1,
   NS=1000,
   bn=0.1,
   t_off=7,
+  K=50,
   tr="random"
 )
 
@@ -109,7 +110,7 @@ mcp <- list(
     Ntries_sir=10
   ),
   abc=list(
-    th=0.01
+    th=0.1
   ),
   Niters=200000,
   acc.rate=1
@@ -118,8 +119,8 @@ mcp <- list(
 # program options
 opt<-list(
   checkinit=0,
-  chainvars=c("B","mr","tr", "dr","ll", "bn", "t_off", "Itraj"),
-  movevars= c("bn", "T", "T2", "dr",  "B", "mr", "t_off", "T3"),
+  chainvars=c("B","mr","tr", "dr","ll", "t_off", "Itraj"),
+  movevars= c("T", "T2",  "B", "mr", "t_off", "T3"),
   #movevars= c("T", "T2", "T3"),
   firstN=c(9,10,13,18),
   #firstN=seq(2,6),

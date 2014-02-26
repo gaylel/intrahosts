@@ -76,10 +76,35 @@ double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)
 	return bt ;
 }
 
-//phylo* R_to_phylo(SEXP tr)
-//{
-//
-//}
+phylo * R_to_phylo(SEXP R_tr)
+{
+	int ntips = INTEGER(VECTOR_ELT(R_tr, 4))[0] + 1;
+	SEXP nl;
+	//char **ch;
+	Rprintf("ntips = %i\n", ntips) ;
+	phylo* tr = phylo_create(ntips) ;
+	int nedges = 2 * (ntips - 1) ;
+	int i ;
+	for (i=0 ; i<(nedges) ; i++)
+	{
+		tr->edge[i][0] = INTEGER(VECTOR_ELT(R_tr, 0))[i] - 1 ;
+		tr->edge[i][1] = INTEGER(VECTOR_ELT(R_tr, 0))[nedges + i] - 1 ;
+		Rprintf("edge = %i %i\n", tr->edge[i][0], tr->edge[i][1]) ;
+	
+		tr->el[i] = REAL(VECTOR_ELT(R_tr, 1))[i] ;
+	}
+	
+	nl = VECTOR_ELT(R_tr, 3) ;
+	for (i=0 ; i<tr->NNode ; i++)
+	{
+	//	Pmychar[0] = R_alloc(strlen(CHAR(STRING_ELT(mychar, 0))), sizeof(char));
+    
+		
+		tr->nodelabel[i] = atoi(CHAR(STRING_ELT(nl, i)) ) ;
+	}
+	return tr ;
+}
+
 
 SEXP phylo_to_R(phylo* tr)
 {
@@ -151,4 +176,13 @@ SEXP phylo_to_R(phylo* tr)
 	
 	
 	return R_list ;
+}
+
+phylo * phylo_addnewedge(phylo * tr, int ei, int from_node, int to_node, double elength)
+{
+	tr->edge[ei][0] = from_node ;
+	tr->edge[ei][1] = to_node ;
+	tr->el[ei] = elength ;
+							
+	return tr ;
 }

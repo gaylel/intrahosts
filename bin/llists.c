@@ -199,3 +199,19 @@ int llist_min(item_i *cur)
 	}
 	return m ;
 }
+
+int llist_print(item_i *cur)
+{
+	item_i * ptr = cur ;
+	int m ;
+	
+	m=(ptr==NULL) ? 0 : cur->val ;
+	
+	while (ptr!=NULL)
+	{
+		Rprintf("%i, ", ptr->val) ; 
+		ptr = ptr->next ;
+		 
+	}
+	return 0 ;
+}

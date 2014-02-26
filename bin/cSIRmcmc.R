@@ -11,20 +11,21 @@ mcmc_loadsmps<-function(resdir)
 	return(smp)
 }
 
-mcmc_loadvar <- function(resdir, var, opt, mcp)
+mcmc_loadvar <- function(resdir, var, opt, mcp, thin=1, i=1)
 {
   if (opt$saveevery > 0)
   {
-    i <- 1
+    #i <- 300
     smp <- NULL
-    while (i*opt$saveevery < mcp$Niters)
+    while (i*opt$saveevery <= mcp$Niters)
     {
-      z <- try(load(paste(resdir, "/", var, "_", format(i*opt$saveevery, scientific=FALSE), ".mcmc", sep="")))
+      z <- try(load(paste(resdir, "/", var, "_", format(i*opt$saveevery, scientific=FALSE), ".mcmc", sep="")), silent=TRUE)
       if (class(z)=="try-error")
       {
-      	z <- try(load(paste(resdir, "/", var, "_", format(i*opt$saveevery, scientific=TRUE), ".mcmc", sep="")))
+      	z <- try(load(paste(resdir, "/", var, "_", format(i*opt$saveevery, scientific=TRUE), ".mcmc", sep="")), silent=TRUE)
       }
-      smp<-c(smp,eval(parse(text=var)))
+      s <- eval(parse(text=var))
+      smp<-c(smp, s[seq(1,opt$saveevery,by=100)])
       i <- i + 1
     }
     
@@ -32,7 +33,7 @@ mcmc_loadvar <- function(resdir, var, opt, mcp)
     load(paste(resdir, "/", var, ".mcmc", sep=""))  
     smp<-eval(parse(text=var))
   }
-  smp[[1]] <- NULL
+  #smp[[1]] <- NULL
   return(smp)
 }
 
@@ -43,9 +44,9 @@ mcmc_loadsmp<-function(resdir,var, opt, mcp)
 	vn<-list()
 	switch(var,
 	"B"={
-	  smp <- mcmc_loadvar(resdir, var, opt, mcp)
-    NHosts<-ncol(smp[[1]])
-    smp<-t(matrix(unlist(smp),nrow=NHosts*NHosts))
+	  	smp <- mcmc_loadvar(resdir, var, opt, mcp)
+    	NHosts<-ncol(smp[[1]])
+    	smp<-t(matrix(unlist(smp),nrow=NHosts*NHosts))
     
 		
 		k=1
@@ -57,7 +58,7 @@ mcmc_loadsmp<-function(resdir,var, opt, mcp)
 				k<-k+1
 			}
 		}
-		smp<-mcmc_convert(smp)
+		smp<-mcmc_convert(smp, thin=100)
 	},
 	"tr"={
 		library("ape")
@@ -84,19 +85,36 @@ mcmc_loadsmp<-function(resdir,var, opt, mcp)
 		smp<-mcmc_convert(smp,100)
 		#smp<-mcmc_convert(smp)
 	},
-  "tr_out"={
-    library("ape")
-    smp <- mcmc_loadvar(resdir, "tr", opt, mcp)
-    smp <- smp[50000:length(smp)]
-    mcmc_writetrees(smp[5000:length(smp)], resdir)
-    smp <- NULL
-  },       
+  	"tr_out"={
+    	library("ape")
+    	smp <- mcmc_loadvar(resdir, "tr", opt, mcp, i=400)
+    	#smp <- smp[400000:length(smp)]
+    	mcmc_writetrees(smp, resdir)
+    	smp <- NULL
+  	}, 
+  	"Itraj"={
+  		smp <- mcmc_loadvar(resdir, "Itraj", opt, mcp)
+  		T <- length(smp[[1]])
+  		smp <- t(matrix(unlist(smp), nrow=T))
+  		for (i in seq(1,ncol(smp)))
+		{
+			vn[[i]]<-paste("I_",i,sep="")
+
+		}	
+  		smp<-mcmc_convert(smp, 100)
+  		
+  	},
+  	"acc.rate"={
+  		smp <- mcmc_loadvar(resdir, "Itraj", opt, mcp)
+  		
+  	},
+        
 	{
 	  smp <- mcmc_loadvar(resdir, var, opt, mcp)
 	  smp<-matrix(unlist(smp),ncol=1)
-    print(smp)
+    	
 		vn[[1]]<-var
-		smp<-mcmc_convert(smp)
+		smp<-mcmc_convert(smp, thin=100)
 	}
 	)
 	
@@ -104,7 +122,7 @@ mcmc_loadsmp<-function(resdir,var, opt, mcp)
 	varnames(smp)<-vn 
 	#smp<-mcmc_process(smp,1000,100)
 	#smp<-mcmc_process(smp,3000,1)
-	smp<-mcmc_process(smp,0,1)
+	smp<-mcmc_process(smp,400000,100)
 	return(smp)
 }
 

@@ -26,4 +26,5 @@ int llist_get_ind_i(int val, item_i * cur) ;
 int llist_min(item_i *cur) ;
 int llist_destroy_i(item_i * cur ) ;
 int llist_destroy_d(item_d * cur ) ;
+int llist_print(item_i *cur) ;
 
