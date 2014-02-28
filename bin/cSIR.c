@@ -1379,7 +1379,7 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 			}
 			
 			//if (i > 0 & Ancsum > 1)
-			if (i > 0 & (intNode >= ntips))
+			if ((i > 0) & (intNode >= ntips))
 			{
 				// calculate rates for each host
 				kt = *PR_T2[3][i] ;	
@@ -1847,7 +1847,7 @@ SEXP tree_reconstruct_withll(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEXP R_B, SE
 				Ancsum += Anc[kt] ; 
 			}
 			
-			if (i > 0 & intNode >= ntips)
+			if ((i > 0) & intNode >= ntips)
 			//if (i > 0)
 			{
 			lambdao_sum = 0 ;
