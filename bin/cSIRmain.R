@@ -1408,13 +1408,13 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
 		    params <- cSIR_mrupdate(x, params, dat.params, dat, hp.params, mcmc.params$mr)
 		  },
 		  "2"={
-		    params <- cSIR_drupdate(params, dat.params, dat, hp.params, mcmc.params)
+		    params <- cSIR_drupdate(x, params, dat.params, dat, hp.params, mcmc.params)
 		  },
 		  "3"={
 		    params <- cSIR_Tupdate(x, params, dat.params, dat, hp.params, mcmc.params$tr)
 		  },
 		  "4"={ 
-		    params <- cSIR_Bupdate(params, dat.params, dat, hp.params, mcmc.params)
+		    params <- cSIR_Bupdate(x, params, dat.params, dat, hp.params, mcmc.params)
     	},
 		  "5"={
 		    params <- cSIR_T2update(x, params, dat.params, dat, hp.params, mcmc.params$tr, 1)
@@ -1427,7 +1427,7 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
 		    params <- cSIR_bnupdate(x, params, dat.params, dat, hp.params, mcmc.params)
 		  },
 		  "8"={ 
-		    params <- cSIR_t_offupdate(params, dat.params, dat, hp.params, mcmc.params)
+		    params <- cSIR_t_offupdate(x, params, dat.params, dat, hp.params, mcmc.params)
 		  },
 		  "9"={
 		    params <- cSIR_T2update(x, params, dat.params, dat, hp.params, mcmc.params$tr, 2)
@@ -1455,11 +1455,11 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
       ch$acc.rate[[v]] <- c(ch$acc.rate[[v]], mean(acc.rate[[v]]))
 
     }
-  #  if (params$is.acc==1 && m==3)
-  #  {
+    if (t %% 100 == 0)
+    {
     print(sprintf("%i loglikelihood   %8.4f   Mutation rate   %8.4f  Death rate %8.4f BN %8.4f t_off %8.4f Move %i", t, params$ll, params$mr, params$dr,params$bn, params$t_off, m))
 	
-#	}
+	}
 	
     
 		if (opt$saveevery > 0 & ((t %% opt$saveevery) == 0))
@@ -1779,33 +1779,50 @@ cSIR_B_T_update<-function(x, params, dat.params, dat, hp.params, mcmc.params)
 	return(params)
 }
 
-cSIR_Bupdate<-function(params, dat.params, dat, hp.params, mcmc.params)
+cSIR_Bupdate<-function(x, params, dat.params, dat, hp.params, mcmc.params)
 {
 	newB <- cSIR_Bproposal(params$B, params$Bcon, mcmc.params$B)  
 	oldB<-params$B
 	params$B<-newB
 	tr_list <- cSIR_drawtr_list(params=params, dat.params=dat.params, dat=dat, mcmc.params=mcmc.params$tr)
 	params$B<-oldB
-  params$is.acc <- 0
+  	params$is.acc <- 0
+  
+  #if (tr_list$is.acc == 1)
+  #{
+  #  tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
+  #  #print(tstats)
+  #  th <- mcmc.params$abc$th
+  #  if (tstats$d1<th & tstats$d2<th)
+  #  {
+  #    pold <- cSIR_Bprior(B=oldB, dat.params$NHosts, hp.params$B.br1, hp.params$B.br2, mode="d", is.log=TRUE)
+  #    pnew <- cSIR_Bprior(B=newB, dat.params$NHosts, hp.params$B.br1, hp.params$B.br2, mode="d", is.log=TRUE)
+   
+  #   h<-min(1,exp(pnew - pold)) ;
+  #    if (runif(1)<=h)
+  #    {
+  #      params$B<-newB
+  #      params$is.acc <- 1
+  #    }
+  #  }
+    
+  #}
   
   if (tr_list$is.acc == 1)
   {
-    tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
-    #print(tstats)
-    th <- mcmc.params$abc$th
-    if (tstats$d1<th & tstats$d2<th)
-    {
       pold <- cSIR_Bprior(B=oldB, dat.params$NHosts, hp.params$B.br1, hp.params$B.br2, mode="d", is.log=TRUE)
       pnew <- cSIR_Bprior(B=newB, dat.params$NHosts, hp.params$B.br1, hp.params$B.br2, mode="d", is.log=TRUE)
-      h<-min(1,exp(pnew - pold)) ;
-      if (runif(1)<=h)
+      llold <- params$ll
+      llnew <- pml(tr_list$tr, x, rate=params$mr, model=hp.params$mut$model)$logLik + tr_list$ll
+	  h<-min(0, pnew - pold + llnew - llold) ;
+      if (log(runif(1))<=h)
       {
         params$B<-newB
         params$is.acc <- 1
+        params$ll <- llnew
+        params$tr_list <- tr_list
       }
-    }
-    
-  }
+   }
 	return(params)			
 }
 
@@ -1865,7 +1882,7 @@ cSIR_bnupdate<-function(x, params, dat.params, dat, hp.params, mcmc.params)
   return(params)			
 }
 
-cSIR_drupdate <- function(params, dat.params, dat, hp.params, mcmc.params)
+cSIR_drupdate <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 {
   newdr <- cSIR_drproposal(params$dr, mcmc.params$dr)  
   olddr<-params$dr
@@ -1874,22 +1891,40 @@ cSIR_drupdate <- function(params, dat.params, dat, hp.params, mcmc.params)
   params$dr<-olddr
   params$is.acc <- 0
   
+  #if (tr_list$is.acc == 1)
+  #{
+  #  tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
+  #  th <- mcmc.params$abc$th
+  #  if (tstats$d1<th & tstats$d2<th)
+  #  {
+  #    pold <- cSIR_drprior(dr=olddr, hp.params$dr, mode="d", is.log=TRUE)
+  #    pnew <- cSIR_drprior(dr=newdr, hp.params$dr, mode="d", is.log=TRUE)
+  #    h<-min(1,exp(pnew - pold)) ;
+  #    if (runif(1)<=h)
+  #    {
+  #      params$dr<-newdr
+  #      params$is.acc <- 1
+  #    }
+  #  }
+    
+  # }
+  
   if (tr_list$is.acc == 1)
   {
-    tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
-    th <- mcmc.params$abc$th
-    if (tstats$d1<th & tstats$d2<th)
-    {
-      pold <- cSIR_drprior(dr=olddr, hp.params$dr, mode="d", is.log=TRUE)
+   	  pold <- cSIR_drprior(dr=olddr, hp.params$dr, mode="d", is.log=TRUE)
       pnew <- cSIR_drprior(dr=newdr, hp.params$dr, mode="d", is.log=TRUE)
-      h<-min(1,exp(pnew - pold)) ;
-      if (runif(1)<=h)
+      llold <- params$ll
+      llnew <- pml(tr_list$tr, x, rate=params$mr, model=hp.params$mut$model)$logLik + tr_list$ll
+
+       
+      h<-min(0,pnew + llnew - pold - llold) 
+      if (log(runif(1))<=h)
       {
-        params$dr<-newdr
+        params$dr<- newdr
         params$is.acc <- 1
+        params$ll <- llnew
+        params$tr_list <- tr_list
       }
-    }
-    
   }
   return(params)			
 }
@@ -1930,7 +1965,7 @@ cSIR_mrupdate <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 	return(params)	
 }
 
-cSIR_t_offupdate <- function(params, dat.params, dat, hp.params, mcmc.params)
+cSIR_t_offupdate <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 {
   newt_off <- cSIR_t_offproposal(params$t_off, mcmc.params$t_off)  
   oldt_off<-params$t_off
@@ -1939,21 +1974,41 @@ cSIR_t_offupdate <- function(params, dat.params, dat, hp.params, mcmc.params)
   params$t_off<-oldt_off
   params$is.acc <- 0
   
+  #if (tr_list$is.acc == 1)
+  #{
+  #  tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
+  #  th <- mcmc.params$abc$th
+  #  if (tstats$d1<th & tstats$d2<th)
+  #  {
+  #    pold <- cSIR_t_offprior(t_off=oldt_off, hp.params$t_off, mode="d", is.log=TRUE)
+  #    pnew <- cSIR_t_offprior(t_off=newt_off, hp.params$t_off, mode="d", is.log=TRUE)
+  #    h<-min(1,exp(pnew - pold)) ;
+  #    if (runif(1)<=h)
+  #    {
+  #      params$t_off<-newt_off
+  #      params$is.acc <- 1
+  #    }
+  #  }
+    
+  #}
+  
   if (tr_list$is.acc == 1)
   {
-    tstats <- cSIR_getTstats(tr_list, params$tr_list, mcmc.params)
-    th <- mcmc.params$abc$th
-    if (tstats$d1<th & tstats$d2<th)
-    {
-      pold <- cSIR_t_offprior(t_off=oldt_off, hp.params$t_off, mode="d", is.log=TRUE)
-      pnew <- cSIR_t_offprior(t_off=newt_off, hp.params$t_off, mode="d", is.log=TRUE)
-      h<-min(1,exp(pnew - pold)) ;
-      if (runif(1)<=h)
-      {
-        params$t_off<-newt_off
-        params$is.acc <- 1
-      }
-    }
+      	pold <- cSIR_t_offprior(t_off=oldt_off, hp.params$t_off, mode="d", is.log=TRUE)
+      	pnew <- cSIR_t_offprior(t_off=newt_off, hp.params$t_off, mode="d", is.log=TRUE)
+    	llold <- params$ll
+      	llnew <- pml(tr_list$tr, x, rate=params$mr, model=hp.params$mut$model)$logLik + tr_list$ll
+
+       
+      	h<-min(0,pnew + llnew - pold - llold) 
+      	if (log(runif(1))<=h)
+      	{
+        	params$t_off<-newt_off
+        	params$is.acc <- 1
+        	params$tr_list <- tr_list
+        	params$is.acc <- 1
+        	params$ll <- llnew
+      	}
     
   }
   return(params)  		
