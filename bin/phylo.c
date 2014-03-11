@@ -70,6 +70,8 @@ double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)
 		bt[i][1]=hosts[Ni] ;
 		bt[i][2]=hosts[ch1] ;
 		bt[i][3]=hosts[ch2] ;
+		//Rprintf("%8.4f %i %i %i\n", bt[i][0], hosts[Ni], hosts[ch1], hosts[ch2]) ; 
+		
 	}
 	Free(hosts) ;
 	Free(tips) ;
@@ -81,7 +83,7 @@ phylo * R_to_phylo(SEXP R_tr)
 	int ntips = INTEGER(VECTOR_ELT(R_tr, 4))[0] + 1;
 	SEXP nl;
 	//char **ch;
-	Rprintf("ntips = %i\n", ntips) ;
+	//Rprintf("ntips = %i\n", ntips) ;
 	phylo* tr = phylo_create(ntips) ;
 	int nedges = 2 * (ntips - 1) ;
 	int i ;
@@ -89,7 +91,7 @@ phylo * R_to_phylo(SEXP R_tr)
 	{
 		tr->edge[i][0] = INTEGER(VECTOR_ELT(R_tr, 0))[i] - 1 ;
 		tr->edge[i][1] = INTEGER(VECTOR_ELT(R_tr, 0))[nedges + i] - 1 ;
-		Rprintf("edge = %i %i\n", tr->edge[i][0], tr->edge[i][1]) ;
+		//Rprintf("edge = %i %i\n", tr->edge[i][0], tr->edge[i][1]) ;
 	
 		tr->el[i] = REAL(VECTOR_ELT(R_tr, 1))[i] ;
 	}
@@ -180,9 +182,34 @@ SEXP phylo_to_R(phylo* tr)
 
 phylo * phylo_addnewedge(phylo * tr, int ei, int from_node, int to_node, double elength)
 {
+	//Rprintf("%i %i\n", from_node, to_node) ;
 	tr->edge[ei][0] = from_node ;
 	tr->edge[ei][1] = to_node ;
 	tr->el[ei] = elength ;
 							
+	return tr ;
+}
+
+phylo * phylo_replacenode(phylo* tr, int n, int oldnode, int newnode)
+{
+	// n : index of edge row
+	int j ;
+	
+	if (n > 0)
+	{
+		// replace intNode in tr_old
+		for (j = n ; j>=0 ; j--)
+		{
+			if (tr->edge[j][0]==oldnode)
+			{
+				tr->edge[j][0] = newnode ;			
+			}
+			if (tr->edge[j][1]==oldnode)
+			{
+				tr->edge[j][1] = newnode ;
+			}
+			
+		}
+	}
 	return tr ;
 }

@@ -24,6 +24,7 @@ SEXP tree_reconstruct_with_partialll(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEXP
 SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEXP R_B, SEXP R_NS, SEXP R_BN, SEXP R_OBS, SEXP R_OBS2, SEXP R_tr_old, SEXP R_mig2) ;
 double ** calculateSIR_rates(double ** lambdao, double *B, int *PR_I, int *PR_S, int ha, int hb, int i, int kt, int NHosts, int NS, int TN, int *Anc, int *OBS2) ;
 double calculatelambdaosum(double ** lambdao, int NHosts) ;
+double ** Migmx_addnode(int mig_n, double **mig, double t, int ha, int hb, int Node) ;
 
 
 struct hnode {
@@ -48,6 +49,7 @@ int * Nodes_pick_pair(int *ch, hnode2 Nodesa, hnode2 Nodesb, int ha, int hb) ;
 hnode2 Nodes_deleteelement(int val, hnode2 Nodes) ;
 int * Nodes_pick_sets(int *ov, hnode2 Nodesa1, hnode2 Nodesa2, hnode2 Nodesb1, hnode2 Nodesb2, int ha, int hb) ;
 int * Nodes_pick_children(int *ch, int *ov, hnode2 Nodesa1, hnode2 Nodesa2, hnode2 Nodesb1, hnode2 Nodesb2, int ha, int hb) ;
+double * Migmx_replacenode(int mig_n, int mig_N, double *mig, int oldnode, int newnode) ;
 
 
 SEXP sample_cSIR_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr)
@@ -1145,9 +1147,19 @@ int * Nodes_pick_sets(int *ov, hnode2 Nodesa1, hnode2 Nodesa2, hnode2 Nodesb1, h
 		ov[0] = 1 ; // 1,0
 	}
 	else{
-		if (rbinom(1, (double) Nodesb2.N/(Nodesb2.N + Nodesb1.N)) == 1)
+		if (ha!=hb)
 		{
-			ov[1] = 1 ; // 0,1
+			if (rbinom(1, (double) Nodesb2.N/(Nodesb2.N + Nodesb1.N)) == 1)
+			{
+				ov[1] = 1 ; // 0,1
+			}
+		}
+		else
+		{
+			if (rbinom(1, (double) Nodesa2.N/(Nodesa2.N + Nodesa1.N - 1)) == 1)
+			{
+				ov[1] = 1 ; // 0,1
+			}
 		}
 	}
 	// 0,0
@@ -1166,21 +1178,60 @@ int * Nodes_pick_children(int *ch, int *ov, hnode2 Nodesa1, hnode2 Nodesa2, hnod
         }
         else
  		{            		  		
-        	ch = Nodes_pick_pair(ch, Nodesa1, Nodesb2, ha, hb) ;
+        	ch = Nodes_pick_pair(ch, Nodesa1, Nodesb2, ha, hb+1) ;
         
         }
     }else
         {
-            ch = Nodes_pick_pair(ch, Nodesa2, Nodesb1, ha, hb) ;
+            ch = Nodes_pick_pair(ch, Nodesa2, Nodesb1, ha, hb+1) ;
     }
     
     return ch ;
 }
 
+double ** Migmx_addnode(int mig_n, double **mig, double t, int ha, int hb, int Node)
+{
+	
+		//Rprintf("%i\n", mig_n) ;
+		if (mig_n == 1)				
+		{
+			mig = Calloc(mig_n, double *) ;
+			mig[0] = Calloc(4, double) ;
+					
+		}
+		else
+		{
+			mig = Realloc(mig, mig_n, double *) ;
+			mig[mig_n - 1] = Calloc(4, double) ;
+		}
+		mig[mig_n - 1][0] = t ; 
+		mig[mig_n - 1][1] = ha ; 
+		mig[mig_n - 1][2] = hb ; 
+		mig[mig_n - 1][3] =  (double) Node ;
+		//Rprintf("%8.4f %8.4f %8.4f %8.4f\n", mig[mig_n - 1][0], mig[mig_n - 1][1], mig[mig_n - 1][2], mig[mig_n - 1][3]) ;
+	
+	return mig ;
+}
+
+double * Migmx_replacenode(int mig_n, int mig_N, double *mig, int oldnode, int newnode)
+{
+	// n : index of edge row
+	int j ;
+	
+		for (j=mig_n ; j<mig_N ; j++)
+		{
+		if ((int) mig[j + 3*mig_N] == oldnode)
+		{
+			mig[j + 3*mig_N] = newnode ;
+		}
+		}
+	return mig ;
+}
+
 SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEXP R_B, SEXP R_NS, SEXP R_BN, SEXP R_OBS2, SEXP R_OBS, SEXP R_tr_old, SEXP R_mig2)
 {
    int  st=0, st2=-1, *minNodes, mn, r1, r2, *ch, ei, intNode;
-  	int bn , m, ll_calc=1, hi, hj, Ii, Sj, *Anc, kt, ktt, Ancsum=0, ce = 0, ce1= 0;
+  	int bn , m,  hi, hj, Ii, Sj, *Anc, kt, ktt, Ancsum=0, ce = 0, ce1= 0;
   	double *PR_bt, **bt, v1, v2, *vvec, ll=0.0, lambdao_sum=0.0, *PR_ll, ll_i ;
 
 	item_i * tst ;
@@ -1223,33 +1274,40 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 	double BN = REAL(coerceVector(R_BN, REALSXP))[0] ;
 	int *OBS = INTEGER(coerceVector(R_OBS, INTSXP)) ;
 	int *OBS2 = INTEGER(coerceVector(R_OBS2, INTSXP)) ;
+	int OBS3[NHosts] ;
 	int sumOBS=0, i1 ;
+	int ll_calc = 0 ;
 	phylo *tr_old ;
 	for (i1=0 ; i1 <NHosts ; i1++)
 	{
 		sumOBS += OBS2[i1] ;
+		OBS3[i1] = OBS2[i1] + OBS[i1] ;
 	}
-	Rprintf("%i\n", sumOBS) ;
+	//Rprintf("%i\n", sumOBS) ;
 	double **bt_old ;
 	double *mig2 ;
-	double ttmp ;
-	int mig2_n ;
-	int bt_n ;
+	double ttmp, ttmp2 ;
+	int mig2_N, mig2_n=0 ;
+	int bt_n, i ;
 	if (sumOBS > 0)
 	{
 		tr_old = R_to_phylo(R_tr_old) ;
 		// calculate branching times
-		bt_old = phylo_bt(tr_old, ST, OBS, NHosts) ;
+		bt_old = phylo_bt(tr_old, ST, OBS2, NHosts) ;
 		bt_n = tr_old->NNode - 1 ;
 		mig2 = REAL(coerceVector(R_mig2, REALSXP)) ; 
-		mig2_n = INTEGER(getAttrib(R_mig2, R_DimSymbol))[0] ;
-		Rprintf("here\n") ;
+		mig2_N = INTEGER(getAttrib(R_mig2, R_DimSymbol))[0] ;
+		//Rprintf("here\n") ;
+		for (i=0 ; i< tr_old->NNode - 1 ; i++)
+		{
+		//	Rprintf("%8.4f\n", bt_old[i][0]) ;
+		}
 	}
 	
 	
 	/*************** INTERNAL VARIABLES FOR ALGORITHM ***********************************/
 	
-	int i, j, k=0, ha, hb, oa, ob, Ntrans ;
+	int j, k=0, ha, hb, oa, ob, Ntrans ;
 	double ***PR_T2 ;
 	PR_T2 = Calloc(4,double**) ;	//reshape(PR_T)
 	for (j=0 ; j<4 ; j++)
@@ -1316,8 +1374,8 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 	{
 		//SNsum[i] = SN[i] + j ;
     	//j+= SN[i] ;
-    	SNsum[i] = OBS[i] + j ;
-    	j+= OBS[i] ;
+    	SNsum[i] = OBS[i] + OBS2[i] + j ;
+    	j+= OBS[i] + OBS2[i] ;
     	st2 = -1 ;
     	for (k=0 ; k< PR_I[TN * (i+1) - 1] ; k++)
     	{
@@ -1332,19 +1390,23 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 
 	for (i=TN-1 ; i>-1 ; i--)
 	{
-		
+		//Rprintf("%i\n", i) ;
 		ll_i = 0 ;
 		ce = 0 ;
 		ce1 = 0 ;
     // for each event get hosts
 		ha = (int) *PR_T2[1][i] - 1;
 		hb = (int) *PR_T2[2][i] - 1;
-		
-   		
+		/*
+   		Rprintf("\nNodes in 0 at %i=\n", i) ;
+        						llist_print(Nodes2[0].n) ;
+        						Rprintf("\nNodes in 1 at %i=\n", i) ;
+        						llist_print(Nodes2[1].n) ;
+        */						
     // if terminal event
    		if (i==Tend[ha])
     	{
-    		Rprintf("Terminal event %i\n", i) ;
+    		//Rprintf("Terminal event %i\n", i) ;
       		st = (ha>0 ? SNsum[ha-1] : 0) ;
       		st2 = Nodes[ha].minNode - 1;
 		  	
@@ -1369,7 +1431,11 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 			//	minNodes[ha] = st2+1 ;  
 		  	//}
 		  	Anc[ha]+=OBS[ha] + OBS2[ha];   
-      	}
+		  	//llist_print(Nodes[ha].n) ;
+	 		//Rprintf(" ha\n") ;	
+	 		//llist_print(Nodes2[ha].n) ;
+			//Rprintf(" ha2\n") ;
+		}
     	else
 		{
 			Ancsum = 0 ;
@@ -1379,14 +1445,18 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 			}
 			
 			//if (i > 0 & Ancsum > 1)
-			if ((i > 0) & (intNode >= ntips))
+			
+			//if ((i > 0) & (intNode >= ntips))
+			if ((i > 0))
 			{
 				// calculate rates for each host
 				kt = *PR_T2[3][i] ;	
+				if (ll_calc == 1)
+				{
 				lambdao =  calculateSIR_rates(lambdao, B, PR_I, PR_S, ha, hb, i, kt, NHosts, NS, TN, Anc, OBS2) ;
 				lambdao_sum = calculatelambdaosum(lambdao, NHosts) ;
 				ll_i = -lambdao_sum * (*PR_T2[0][i] - *PR_T2[0][i-1]); 
-			
+				}
 				if ((int) *PR_T2[3][i] == -1 )
 				{
 					// death but birth in reverse.
@@ -1413,77 +1483,142 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 				//	ov = Nodes_pick_sets(ov, Nodes[ha], Nodes2[ha], Nodes[hb], Nodes2[hb], ha, hb) ;
 
 				//}
-				
+				//Rprintf("%i\n", bt_n) ;
 				if ((int) *PR_T2[3][i] > 0 )
 				{
 					Ntrans = (int)*PR_T2[3][i] ;
 					// if coincides with coalescent interval among old observed tree
 					if (sumOBS > 0) //oa,ob=11
 					{			
-						if (bt_old[bt_n][0] == *PR_T2[0][i])
+						if (bt_n >= 0)
 						{
-							// create coalescent event in new tree
-        					Rprintf("birth\n") ;
-        					ch[0] = tr_old->edge[bt_n*2 + 1][1] ;
+						if (bt_old[bt_n][0] > *PR_T2[0][i-1])
+						{
+							ch[0] = tr_old->edge[bt_n*2 + 1][1] ;
         					ch[1] = tr_old->edge[bt_n*2][1] ;
+        					
+							Rprintf("Existing coalescent event between %i from %i and  %i from %i\n", ch[0], ha, ch[1], hb ) ;
+							llist_print(Nodes2[0].n) ;
+							Rprintf(" ha2\n") ;
+							llist_print(Nodes2[1].n) ;
+							Rprintf(" hb2\n") ;
+							Rprintf("Nodes in 0=\n") ;
+        				   llist_print(Nodes[0].n) ;
+        				   Rprintf("\nNodes in 1=\n") ;
+        				  llist_print(Nodes[1].n) ;
+							// create coalescent event in new tree
+        					
         					ch[2] = llist_get_ind_i(ch[0], Nodes2[ha].n) ;
         					ch[3] = llist_get_ind_i(ch[1], Nodes2[hb].n) ;
-        					
+        					//Rprintf("birth %i %i %i %i %i\n", ch[0], ch[1], ch[2], ch[3], ei) ;
         					// update new tree
         					tr = phylo_addnewedge(tr, ei, intNode, ch[0], llist_get_el_d(ch[2], Nodes2[ha].t) - *PR_T2[0][i]) ;
 							ei-- ;
 							tr = phylo_addnewedge(tr, ei, intNode, ch[1], llist_get_el_d(ch[3], Nodes2[hb].t) - *PR_T2[0][i]) ;
 							ei-- ;
 							tr->nodelabel[intNode-ntips] = ha ;
-							
+							//Rprintf("added edges\n") ;
 							Nodes2[ha] = Nodes_deleteelement(ch[0], Nodes2[ha]) ;
 							Nodes2[hb] = Nodes_deleteelement(ch[1], Nodes2[hb]) ;
 							Nodes2[ha] = Nodes_addelement(intNode, *PR_T2[0][i], Nodes2[ha]) ;
+							
+							if (bt_n > 0)
+								tr_old = phylo_replacenode(tr_old, (bt_n*2)-1, tr_old->edge[bt_n*2][0], intNode) ;
+							mig2 = Migmx_replacenode(mig2_n, mig2_N, mig2, tr_old->edge[bt_n*2][0], intNode) ;
+							Rprintf("Replacing %i with %i, mig2_n = %i, bt_n =%i\n", tr_old->edge[bt_n*2][0], intNode, mig2_n, bt_n ) ;
+							
 							intNode -- ;
 							Anc[hb] -- ;
-							ce++ ;
+							OBS2[hb]-- ;
+							//ce++ ;
+        					//Rprintf("%i\n", ei) ;
         				
         				
+        					
         				
         				
 						
-						if (bt_n > 0)
-						{
-							// replace intNode in tr_old
-							for (j = (bt_n-1)*2 ; j>=0 ; j--)
-							{
-								if (tr_old->edge[j][0]==tr_old->edge[bt_n*2][0])
-								{
-									tr_old->edge[j][0] = intNode ;			
-								}
-								if (tr_old->edge[j][1]==tr_old->edge[bt_n*2][0])
-								{
-									tr_old->edge[j][1] = intNode ;
-								}
-							}
-						}
+						
 						bt_n -- ;	
 						Ntrans -- ;
-						Rprintf("birth\n") ;
-        		
+						
+							
+						
+							Rprintf("old tree\n") ;
+							if (sumOBS > 0)
+							{
+								for (j=0 ; j<tr_old->Nedge ; j++)
+								{
+									//Rprintf("%i %i\n", tr_old->edge[j][0], tr_old->edge[j][1]) ;
+								}
+								
+							}
+							Rprintf("new tree\n") ;
+							for (j=0 ; j<tr->Nedge ; j++)
+							{
+								Rprintf("%i %i\n", tr->edge[j][0], tr->edge[j][1]) ;
+							}
+							
+							
+							
+							
+        				}
+        				// look at migrations
+        				}
+        				if (mig2_n < mig2_N)
+        				{
+        					while (mig2[mig2_n] > *PR_T2[0][i-1])
+        					{
+        						Rprintf("Old migration, node=%i, ha=%i, hb=%i\n", (int) mig2[mig2_n + 3*mig2_N], ha, hb) ;
+        						
+        						
+        						ttmp = llist_get_el_d(llist_get_ind_i(mig2[mig2_n + 3*mig2_N], Nodes2[hb].n), Nodes2[hb].t) ;
+						  		
+								Nodes2[hb] = Nodes_deleteelement(mig2[mig2_n + 3*mig2_N], Nodes2[hb]) ;
+								Nodes2[ha] = Nodes_addelement(mig2[mig2_n + 3*mig2_N], ttmp, Nodes2[ha] ) ;
+								Nodes[ha] = Nodes_deleteelement(Nodes[ha].minNode,  Nodes[ha] ) ;
+								
+        						
+        						//update migration matrix
+        						mig = Migmx_addnode(mig_n, mig, *PR_T2[0][i], ha, hb, mig2[mig2_n + 3*mig2_N]) ;
+        						//Rprintf("Old migration mx\n") ;
+        						for (j=0 ; j<mig2_N ; j++)
+								{
+									Rprintf("%8.4f %8.4f %8.4f %8.4f\n", mig2[j], mig2[j + mig2_N], mig2[j + 2*mig2_N], mig2[j + 3*mig2_N] ) ;
+								}
+								mig_n++ ;
+								
+								mig2_n++ ;
+        						Ntrans-- ;
+        						
+        						if (mig2_n == mig2_N) 
+        							break ;
+        					}
+        				}
         			
-        			}
         			
-        			// look at migrations
-        			}
+        			
+        		}
         		// separate two different kind of transmissions
         		//Ntrans = (sumOBS > 0 & ha!=hb) ? Ntrans - (int) mig2[mig2_n * 3 + (mig_n - 1)] : Ntrans ;
-        		for (bn=0 ; bn < Ntrans ; bn++)
+        		//Rprintf("%i %i\n", Nodes[ha].N, Nodes2[ha].N) ;
+         		
+         		for (bn=0 ; bn < Ntrans ; bn++)
         		{
-   		  		  	ov = Nodes_pick_sets(ov, Nodes[ha], Nodes2[ha], Nodes[hb], Nodes2[hb], ha, hb) ;
+        			ov = Nodes_pick_sets(ov, Nodes[ha], Nodes2[ha], Nodes[hb], Nodes2[hb], ha, hb) ;
+   		  		  	if ((ha!=hb) & (sumOBS > 0))
+        			{
+        				ov[1] = 0 ;
+   		  		  	}
+        			
+   		  		  	//Rprintf("%i\t%i\n", ov[0], ov[1]) ;
+					
             	  	ch = Nodes_pick_children(ch, ov, Nodes[ha], Nodes2[ha], Nodes[hb], Nodes2[hb], ha, hb) ;
-					//Rprintf("%i\t%i\n", ov[0], ov[1]) ;
-					// check for extinct nodes.
-				  	if (ch[1] < 0) // -
+					//Rprintf("%i\t%i\t%i\t%i\n", ov[0], ov[1], ch[0], ch[1]) ;
+					if (ch[1] < 0) // -
 				  	{
 				  		// oa,ob 10 00
 				  		Nodes[hb] = Nodes_deleteelement(ch[1], Nodes[hb]) ;
-				  		
 				  	}
 				  	else{
 				  		// node from hb is observed
@@ -1491,29 +1626,43 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 					  	{
 					  		//oa,ob 00 01
 					  		// node from ha is unobserved
-					  		//Rprintf("one extinct 2\n") ; 
-						  	// move node from hb into ha.
+					  		// move node from hb into ha.
 						  	Nodes[ha] = Nodes_deleteelement(ch[0], Nodes[ha]) ;
-						  	//ttmp = llist_get_el_d(llist_get_ind_i(ch[1], Nodes[hb].n), Nodes[hb].t) ;
-						  	//hnode2v = (ov[1] == 0) ? Nodes[hb] : Nodes2[hb] ;
-							//hnode2v = Nodes_deleteelement(ch[1], hnode2v) ;
 							if (ov[1]==0)
 							{
 								ttmp = llist_get_el_d(llist_get_ind_i(ch[1], Nodes[hb].n), Nodes[hb].t) ;
 						  		
 								Nodes[hb] = Nodes_deleteelement(ch[1], Nodes[hb]) ;
+								Nodes[ha] = Nodes_addelement(ch[1], ttmp, Nodes[ha] ) ;
+								if (ha!=hb)
+								{
+								mig = Migmx_addnode(mig_n, mig, *PR_T2[0][i], ha, hb, ch[1]) ;
+								Rprintf("New migration : Moved %i from host %i to %i\n", ch[1], hb, ha) ;
+								
+								mig_n++ ;
+								//Rprintf("mig_n = %i\n", mig_n) ;
+								}
 							}
 							else
 							{
 								ttmp = llist_get_el_d(llist_get_ind_i(ch[1], Nodes2[hb].n), Nodes2[hb].t) ;
-						  		
+						  		Rprintf("moving %i from %i to %i\n", ch[1], hb, ha) ;
 								Nodes2[hb] = Nodes_deleteelement(ch[1], Nodes2[hb]) ;
-							
+								Nodes2[ha] = Nodes_addelement(ch[1], ttmp, Nodes2[ha] ) ;
+								//Rprintf("Nodes in 0=\n") ;
+        						//llist_print(Nodes2[0].n) ;
+        						//Rprintf("\nNodes in 1=\n") ;
+        						//llist_print(Nodes2[1].n) ;
 							}
-							Nodes[ha] = Nodes_addelement(ch[1], ttmp, Nodes[ha] ) ;
+							
 						 	
 						 	
-						 	if (ha != hb) ce1++ ;
+						 	if (ha != hb) 
+						 	{
+						 		ce1++ ;
+						 		// record migrations between different hosts.
+						 		
+						 	}
 						  	//if (ha != hb) ll += log(lambdao[hb][ha]) ;
 						  	Anc[hb]-- ;
 						  	Anc[ha]++ ;
@@ -1524,34 +1673,109 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 					  		//oa,ob = 01, 10, 00
 							// coalescent event
 							// create pair of edges with new internal node.
-							tr = phylo_addnewedge(tr, ei, intNode, ch[0], llist_get_el_d(ch[2], Nodes[ha].t) - *PR_T2[0][i]) ;
-							ei-- ;
-							tr = phylo_addnewedge(tr, ei, intNode, ch[1], llist_get_el_d(ch[3], Nodes[hb].t) - *PR_T2[0][i]) ;
-							ei-- ;
-							
 							tr->nodelabel[intNode-ntips] = ha ;
 							if (ov[0] == 0)
 							{
-								Nodes[ha] = Nodes_deleteelement(ch[0], Nodes[ha]) ;
+								
+								ttmp = llist_get_el_d(ch[2], Nodes[ha].t) - *PR_T2[0][i] ;
+								if (ov[1] == 0)
+								{
+									//00
+									ttmp2 = llist_get_el_d(ch[3], Nodes[hb].t) - *PR_T2[0][i] ;
+									Nodes[ha] = Nodes_deleteelement(ch[0], Nodes[ha]) ;
+									Nodes[hb] = Nodes_deleteelement(ch[1], Nodes[hb]) ;
+									Nodes[ha] = Nodes_addelement(intNode, *PR_T2[0][i], Nodes[ha]) ;
+									//OBS[hb]-- ;
+									
+								}
+								else
+								{
+									//01
+									ttmp2 = llist_get_el_d(ch[3], Nodes2[hb].t) - *PR_T2[0][i] ;
+									Nodes[ha] = Nodes_deleteelement(ch[0], Nodes[ha]) ;
+									Nodes2[hb] = Nodes_deleteelement(ch[1], Nodes2[hb]) ;
+									Nodes2[ha] = Nodes_addelement(intNode, *PR_T2[0][i], Nodes2[ha]) ;
+									Rprintf("New coalescent event between %i and %i\n", ch[0], ch[1]) ;
+									//Rprintf("bt_n=%i", bt_n) ;
+									if (bt_n >= 0)
+									{
+										tr_old = phylo_replacenode(tr_old, ((bt_n+1)*2)-1, ch[1], intNode) ;
+									Rprintf("replacing %i with %i\n", ch[1], intNode) ;	
+									}
+									//if (ha != hb)
+									//{
+									mig2 = Migmx_replacenode(mig2_n, mig2_N, mig2, ch[1], intNode) ;
+								for (j=0 ; j<mig2_N ; j++)
+								{
+									Rprintf("%8.4f %8.4f %8.4f %8.4f %i\n", mig2[j], mig2[j + mig2_N], mig2[j + 2*mig2_N], mig2[j + 3*mig2_N], mig2_n ) ;
+								}
+									//}
+									//OBS2[hb]-- ;
+									
+								}
+								
+								
 							}
 							else
 							{
+							//10
+								ttmp = llist_get_el_d(ch[2], Nodes2[ha].t) - *PR_T2[0][i] ;
+								ttmp2 = llist_get_el_d(ch[3], Nodes[hb].t) - *PR_T2[0][i] ;
 								Nodes2[ha] = Nodes_deleteelement(ch[0], Nodes2[ha]) ;
-							}
-							if (ov[1] == 0)
-							{
 								Nodes[hb] = Nodes_deleteelement(ch[1], Nodes[hb]) ;
+								Nodes2[ha] = Nodes_addelement(intNode, *PR_T2[0][i], Nodes2[ha]) ;
+								Rprintf("New coalescent event between %i and %i\n", ch[0], ch[1]) ;
+								//Rprintf("bt_n=%i", bt_n) ;
+									
+								if (bt_n >= 0)
+								{
+									tr_old = phylo_replacenode(tr_old, ((bt_n+1)*2)-1, ch[0], intNode) ;
+									Rprintf("replacing %i with %i\n", ch[0], intNode) ;
+								}
+								mig2 = Migmx_replacenode(mig2_n, mig2_N, mig2, ch[0], intNode) ;
+								Rprintf("old migration mx after replacing %i with %i\n", ch[0], intNode) ;
+								for (j=0 ; j<mig2_N ; j++)
+								{
+									Rprintf("%8.4f %8.4f %8.4f %8.4f %i\n", mig2[j], mig2[j + mig2_N], mig2[j + 2*mig2_N], mig2[j + 3*mig2_N] , mig2_n) ;
+								}
+								//OBS2[ha]-- ;
 							}
-							Nodes[hb] = Nodes_deleteelement(ch[1], Nodes[hb]) ;
-							Nodes[ha] = Nodes_addelement(intNode, *PR_T2[0][i], Nodes[ha]) ;
+							tr = phylo_addnewedge(tr, ei, intNode, ch[0], ttmp) ;
+							ei-- ;
+							tr = phylo_addnewedge(tr, ei, intNode, ch[1], ttmp2) ;
+							ei-- ;
+							
 							intNode -- ;
 							Anc[hb] -- ;
 							ce++ ;
 							//OBS[hb] -- ;
+							
+							llist_print(Nodes[ha].n) ;
+							Rprintf(" ha\n") ;
+							llist_print(Nodes[hb].n) ;
+							Rprintf(" hb\n") ;
+							
+							Rprintf("old tree\n") ;
+							if (sumOBS > 0)
+							{
+								for (j=0 ; j<tr_old->Nedge ; j++)
+								{
+									Rprintf("%i %i\n", tr_old->edge[j][0], tr_old->edge[j][1]) ;
+								}
+								
+							}
+							Rprintf("new tree\n") ;
+							for (j=0 ; j<tr->Nedge ; j++)
+							{
+								Rprintf("%i %i\n", tr->edge[j][0], tr->edge[j][1]) ;
+							}
+							
 						}
 				  }  
         	}		
 			}
+			if (ll_calc == 1)
+			{
 			if (ce > 0 || ce1 > 0 )
 			{
 				Ii = PR_I[hb*TN + i] ;
@@ -1570,27 +1794,8 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 		//			Rprintf("Ii=%i, Ij=%i, ni=%i, m=%i, m'=%i, nj=%i\n", Ii, PR_I[hb*TN + i], Anc[ha]-ce1, ce1+ ce, ce, Anc[hb]+ce1+ce) ;
 				}
 			}
-			/*
-			if (ha != hb)
-			{
-				if (mig_n == 1)
-				{
-					mig = Calloc(mig_n, double *) ;
-					mig[0] = Calloc(5, double) ;
-					
-				}
-				else
-				{
-					mig = Realloc(mig, mig_n, double *) ;
-					mig[mig_n - 1] = Calloc(5, double) ;
-				}
-				mig[mig_n - 1][0] = *PR_T2[0][i] ; 
-				mig[mig_n - 1][1] = ha + 1; 
-				mig[mig_n - 1][2] = hb + 1; 
-				mig[mig_n - 1][3] = ce ;
-				mig[mig_n - 1][4] = ce1 ;
-				mig_n++ ;
-			}*/
+			}
+			
 			ll += ll_i ;
 			}
 			else
@@ -1603,7 +1808,8 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 			
 		
 		}
-		Rprintf("ll=%8.4f\t%8.4f\t%i\t%i\t%8.4f\t%8.4f\t%8.4f\t%8.4f\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\n", ll_i, ll, ha+1, hb+1, *PR_T2[0][i], *PR_T2[3][i], lambdao[hb][ha], lambdao_sum, ce, ce1, i, Anc[0], Anc[1], Anc[2], Anc[3], Anc[4], Nodes[0].N, Nodes[1].N, Ancsum, intNode) ;
+		//Rprintf("ll=%8.4f\t%8.4f\t%8.4f\t%8.4f\t%8.4f\t%8.4f\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\n", ll_i, ll, ha+1, hb+1, *PR_T2[0][i], *PR_T2[3][i], lambdao[hb][ha], lambdao_sum, ce, ce1, bt_n, Anc[0], Anc[1], Anc[2], Anc[3], Anc[4], Nodes[0].N, Nodes2[0].N, OBS[0], OBS2[0], Ancsum, intNode) ;
+		//Rprintf("%i\t%i\t%8.4f\t%8.4f\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\n", ha+1, hb+1, *PR_T2[0][i], *PR_T2[3][i], ce, ce1, bt_n, Nodes[0].N, Nodes2[0].N, Nodes[1].N, Nodes2[1].N, intNode) ;
 			
 		
 }
@@ -1614,9 +1820,11 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 	PROTECT(R_List = allocVector(VECSXP ,4)) ;
 	PROTECT(R_bt=allocMatrix(REALSXP,tr->NNode,4)) ;
 	PROTECT(R_ll = allocVector(REALSXP, 1)) ;
-	PROTECT(R_mig = allocMatrix(REALSXP, mig_n-1, 5)) ;
+	PROTECT(R_mig = allocMatrix(REALSXP, mig_n-1, 4)) ;
 	PR_bt = REAL(R_bt) ;
-	bt = phylo_bt(tr, ST, OBS, NHosts) ;
+	
+	
+	bt = phylo_bt(tr, ST, OBS3, NHosts) ;
 	for (j=0 ; j<tr->NNode ; j++)
 	{
 		for (i=0;i<4;i++)
@@ -1625,15 +1833,15 @@ SEXP tree_reconstruct_with_partialll2(SEXP R_sir, SEXP R_NHosts, SEXP R_dat, SEX
 			
 		}
 	}
-	/*
+	
 	for (j=0 ; j<(mig_n - 1) ; j++)
 	{
-		for (i=0;i<5;i++)
+		for (i=0;i<4;i++)
 		{
 			REAL(R_mig)[j+i*(mig_n - 1)]=  mig[j][i] ;
 			
 		}
-	}*/
+	}
 	
 	R_tr = phylo_to_R(tr) ;
 	PR_ll = REAL(R_ll) ;
