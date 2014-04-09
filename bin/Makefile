@@ -1,9 +1,18 @@
 datadir=../RData 
 testdir=../test
+BEAGLEPATH=/usr/local/lib/BEAGLE/
+#PKG_CPPFLAGS=$(pkg-config --cflags)
+BEAGLEFLAGS="-I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle"
 
 
-cSIR.so:	cSIR.c llists.c phylo.c leaf.c
-	R CMD SHLIB cSIR.c llists.c phylo.c leaf.c
+#cSIR.so:	cSIR.c llists.c phylo.c leaf.c
+#	R CMD SHLIB cSIR.c llists.c phylo.c leaf.c -I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle
+
+beaglefuncs.o:	beaglefuncs.c
+	gcc -fPIC -c beaglefuncs.c -I. -I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle -g
+
+cSIR.so:	beaglefuncs.o
+	R CMD SHLIB cSIR.c llists.c phylo.c leaf.c beaglefuncs.o -I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle -g
 
 #runmodel: cSIR.so
 #	./cSIRrun.sh 
@@ -62,6 +71,17 @@ testrunplot.%:
 #memcheck:	
 #	R -d  "valgrind --tool=memcheck -v" --slave --vanilla --args "tree.1" < cSIRtest.R
 
+toydir.%:
+	mkdir ../$*
+	cat ../params/sim.params > ../$*/sim.params
+	
+toydata.%:
+	./cSIRsimdata.sh ../$* ;
+	R --slave --vanilla --args ../$* < simData.R
+
+toyrun.%:
+	R --slave --vanilla --args ../$* ../$*/data ../$*/run.params < cSIRrun.R
+
 rundir:
 	mkdir ../run
 	
@@ -90,3 +110,4 @@ debugdata:
 
 debugrun.%:
 	R --slave --vanilla --args $* ../debug  < testmodel.R			
+	#R -d "valgrind --tool=memcheck --leak-check=full --dsymutil=yes" --vanilla --args $* ../debug < testmodel.R

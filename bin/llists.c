@@ -33,7 +33,7 @@ int llist_destroy_i(item_i * cur )
 	while (cur!=NULL)
 	{
 		del=cur->next ;
-		free(cur) ;
+		Free(cur) ;
 		cur=del;
 	}
 	
@@ -46,7 +46,7 @@ int llist_destroy_d(item_d * cur )
 	while (cur!=NULL)
 	{
 		del=cur->next ;
-		free(cur) ;
+		Free(cur) ;
 		cur=del;
 	}
 	return 0 ;
@@ -150,7 +150,7 @@ item_i *llist_delete_el_i(int ind, item_i *cur)
 		del = ptr ;
 	}
 	
-	free(del) ;
+	Free(del) ;
 	del = NULL ;
 	return head ;
 }
@@ -179,7 +179,7 @@ item_d *llist_delete_el_d(int ind, item_d *cur)
 		del = ptr ;
 	}
 	
-	free(del) ;
+	Free(del) ;
 	del = NULL ;
 	return head ;
 }

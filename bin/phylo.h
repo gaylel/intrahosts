@@ -20,3 +20,5 @@ double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts) ;
 phylo * R_to_phylo(SEXP R_tr) ;
 phylo * phylo_addnewedge(phylo * tr, int ei, int from_node, int to_node, double elength) ;
 phylo * phylo_replacenode(phylo* tr, int n, int oldnode, int newnode) ;
+void phylo_free(phylo *tr) ;
+phylo* phylo_dup(phylo *tr) ;

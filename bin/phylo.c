@@ -24,6 +24,38 @@ phylo* phylo_create(int ntips)
 	return tr ;
 }
 
+phylo* phylo_dup(phylo *tr)
+{
+	int ntips = tr->NNode + 1 ;
+	int i ;
+	//Rprintf("ntips = %i\n", ntips) ;
+	phylo *tr2 = phylo_create(ntips) ;
+	tr2->Nedge=tr->Nedge ;
+	tr2->NNode=tr->NNode ;
+	for (i=0 ; i<tr2->Nedge ; i++)
+	{
+		tr2->el[i]=tr->el[i] ;
+		tr2->edge[i][0] = tr->edge[i][0] ; 
+		tr2->edge[i][1] = tr->edge[i][1] ; 
+	}
+	return tr2 ;	
+}
+
+void phylo_free(phylo *tr)
+{
+	int i ;
+	for (i=0 ; i<tr->Nedge ; i++)
+	{
+		Free(tr->edge[i]) ;
+	}
+	Free(tr->edge) ;
+	Free(tr->el) ;
+	//Free(tr->edge) ;
+	Free(tr->tiplabel) ;
+	Free(tr->nodelabel) ;
+	Free(tr) ;
+}
+
 
 double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)
 {
@@ -80,7 +112,7 @@ double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)
 
 phylo * R_to_phylo(SEXP R_tr)
 {
-	int ntips = INTEGER(VECTOR_ELT(R_tr, 4))[0] + 1;
+	int ntips = INTEGER(coerceVector(VECTOR_ELT(R_tr, 4), INTSXP))[0] + 1;
 	SEXP nl;
 	//char **ch;
 	//Rprintf("ntips = %i\n", ntips) ;
@@ -89,11 +121,11 @@ phylo * R_to_phylo(SEXP R_tr)
 	int i ;
 	for (i=0 ; i<(nedges) ; i++)
 	{
-		tr->edge[i][0] = INTEGER(VECTOR_ELT(R_tr, 0))[i] - 1 ;
-		tr->edge[i][1] = INTEGER(VECTOR_ELT(R_tr, 0))[nedges + i] - 1 ;
+		tr->edge[i][0] = INTEGER(coerceVector(VECTOR_ELT(R_tr, 0), INTSXP))[i] - 1 ;
+		tr->edge[i][1] = INTEGER(coerceVector(VECTOR_ELT(R_tr, 0), INTSXP))[nedges + i] - 1 ;
 		//Rprintf("edge = %i %i\n", tr->edge[i][0], tr->edge[i][1]) ;
 	
-		tr->el[i] = REAL(VECTOR_ELT(R_tr, 1))[i] ;
+		tr->el[i] = REAL(coerceVector(VECTOR_ELT(R_tr, 1), REALSXP))[i] ;
 	}
 	
 	nl = VECTOR_ELT(R_tr, 3) ;
@@ -175,7 +207,7 @@ SEXP phylo_to_R(phylo* tr)
 	free(tr->tiplabel) ;
 	free(tr->nodelabel) ;
 	free(tr) ;
-	
+	tr = NULL ;
 	
 	return R_list ;
 }
