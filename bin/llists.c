@@ -1,16 +1,19 @@
 #include "llists.h"
 
+
 item_i * llist_add_el_i(int val_i, item_i* cur)
 {
 	item_i *ptr, *head ;
 	head = cur ; 
 	ptr = Calloc(1,item_i) ;
 	ptr->val = val_i ;
-	ptr->next = NULL ;
+	ptr->next = (item_i *) NULL ;
 	
 	if (cur != NULL)
 	{
+	
 		// existing list
+		
 		while (cur->next!=NULL)
 		{
 			cur = cur->next ;

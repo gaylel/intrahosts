@@ -202,6 +202,10 @@ SEXP phylo_to_R(phylo* tr)
 	
 	classgets(R_list,class) ;
 	UNPROTECT(8) ;
+	for (m=0 ; m<tr->Nedge ; m++)
+	{
+	 free(tr->edge[m]) ; 
+	}
 	free(tr->el) ;
 	free(tr->edge) ;
 	free(tr->tiplabel) ;
