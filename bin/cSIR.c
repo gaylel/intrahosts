@@ -534,11 +534,13 @@ SEXP smc_draw_prior_R(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, 
 			free(si[i].sp->mig) ;
 			si[i].sp->mig = NULL ;
 		}
-	
+		free(si[i].sp) ;
+		//free(si[i].n) ;
+	      
 	}
 	
 		
-	//free(si) ;	
+	free(si) ;	
 	
 	return R_list ;
 	
@@ -669,7 +671,8 @@ smcinfo* smc_draw_prior(int Np, int I0, int NS, int NHosts, double *B, double dr
 	}
 	
 	
-
+	free(p_RVAL1) ;
+	free(p_RVAL2) ;
 	free(traj_acc) ;
 	free(n) ;
 	free(OBS) ;
@@ -5712,6 +5715,8 @@ void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int
 	pp1[1]=0;
 	pp1[2]=0;
 	pp2[0]=0;
+	Free(pp1) ;
+	Free(pp2) ;
 	n[0]--	;
   free(bnsizes) ;
 }
