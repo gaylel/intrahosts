@@ -1987,6 +1987,7 @@ hnode2 Nodes_initialise(hnode2 Nodes)
 	Nodes.t = NULL ;
 	Nodes.N = 0 ;
 	Nodes.minNode = 0 ;
+	return Nodes ;
 }
 
 int * Nodes_pick_pair(int *ch, hnode2 Nodesa, hnode2 Nodesb, int ha, int hb)
