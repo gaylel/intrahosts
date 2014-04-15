@@ -1,3 +1,38 @@
+
+cSIR_runmodel <- function(outdir, datadir, paramfile)
+{
+	source(paramfile)
+	set.seed(opt$seed)
+
+	# load in data
+	load(file=paste(datadir,"/dat.RData",sep="")) ;
+	load(file=paste(datadir,"/seqs.RData",sep="")) ;
+	if (!is.null(opt$firstN))
+	{
+  		dat$SN<-dat$SN[opt$firstN] ;
+  		dat$ST<-dat$ST[opt$firstN] ;
+  		dat$info<-dat$info[opt$firstN] ;
+	}
+
+	opt$outdir <- outdir
+	
+	print(mcp)
+	smp <- cSIR_runmcmc(seqs, dat, opt, init, mcp, hp)
+	
+	#vars<-c("mr","dr","B","ll","tr")
+	#for (i in seq(1,length(vars)))
+	#{
+	#	assign(vars[i],smp[[vars[i]]])
+	#	save(list=vars[i],file=paste(outdir,"/",vars[i],".mcmc",sep="")) ;
+	#}
+	#if (mcp$acc.rate==1)
+	#{
+  	#	acc_rate <- smp$acc.rate
+  	#	save(acc_rate, file=paste(outdir,"/acc_rate.mcmc",sep=""))
+	#}  
+	warnings()
+}
+
 cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
 {
   # Runs mcmc chain targeting posterior distribution
@@ -59,7 +94,7 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
     
   
   t <- 1
-	while (t <= mcp$Niters)
+	while (t <= mcmc.params$Niters)
 	{
 		# make new proposal
 		m <- cSIR_choosemove(moves, prob)
@@ -67,13 +102,13 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
    
 		switch(as.character(m),
 		  "1"={
-		    params <- cSIR_mrupdate(x, params, dat.params, dat, hp.params, mcmc.params$mr)
+		    params <- cSIR_mrupdate(x, params, dat.params, dat, hp.params, mcmc.params)
 		  },
 		  "2"={
 		    params <- cSIR_drupdate(x, params, dat.params, dat, hp.params, mcmc.params)
 		  },
 		  "3"={
-		    params <- cSIR_Tupdate(x, params, dat.params, dat, hp.params, mcmc.params$tr)
+		    params <- cSIR_Tupdate(x, params, dat.params, dat, hp.params, mcmc.params)
 		  },
 		  "4"={ 
 		    params <- cSIR_Bupdate(x, params, dat.params, dat, hp.params, mcmc.params)
@@ -530,7 +565,7 @@ cSIR_mrupdate <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 
  
 	oldmr <- params$mr
-	newmr <- cSIR_mrproposal(params$mr, mcmc.params) 
+	newmr <- cSIR_mrproposal(params$mr, mcmc.params$mr) 
     params$mr <- newmr
 	tr_list <- cSIR_trproposal(x, params, dat.params, dat, hp.params, mcmc.params)
 	params$is.acc <- 0
@@ -724,13 +759,15 @@ cSIR_trproposal <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 {
 	dat$ST <- dat$STin  + params$t_off
 	Np <- mcmc.params$Np		# number of particles
-	Np <- 100
+	Tmax = mcmc.params$Tmax
+	#Np <- 100
+	
 	w <- attr(x, "weight")		# weight for each site
 	a <- .Call("smc_draw_R", Np, dat.params$I0, dat.params$NS, dat.params$NHosts, params$B, params$dr, dat$ST, dat$SN, params$bn, params$K, x, sum(dat$SN), attr(x, "nr"), w, params$mr)
 	tr_list <- list(tr = a[[1]], ll=a[[6]])
   	sir <- list(I=a[[2]], S=a[[3]], T=a[[4]], Iend=a[[5]])
   	sir$T[,2:3] <- sir$T[,2:3] + 1 
-  	tr_list$Itraj <- cSIR_Itraj(sir, Tmax=10)
+  	tr_list$Itraj <- cSIR_Itraj(sir, Tmax=Tmax)
 	tr_list$is.acc <- 1		# ?
 	return(tr_list)
 }
@@ -1189,37 +1226,8 @@ sumofexp <- function(loga, sort=0)
 
 }
 
-cSIR_runmodel <- function(outdir, datadir, paramfile)
-{
-	
-	
-	source(paramfile)
-	set.seed(opt$seed)
 
-	# load in data
-	load(file=paste(datadir,"/dat.RData",sep="")) ;
-	load(file=paste(datadir,"/seqs.RData",sep="")) ;
-	print(dat)
-	if (!is.null(opt$firstN))
-	{
-  		dat$SN<-dat$SN[opt$firstN] ;
-  		dat$ST<-dat$ST[opt$firstN] ;
-  		dat$info<-dat$info[opt$firstN] ;
-	}
 
-	opt$outdir <- outdir
-	smp <- cSIR_runmcmc(seqs, dat, opt, init, mcp, hp)
-	vars<-c("mr","dr","B","ll","tr")
-	for (i in seq(1,length(vars)))
-	{
-		assign(vars[i],smp[[vars[i]]])
-		save(list=vars[i],file=paste(outdir,"/",vars[i],".mcmc",sep="")) ;
-	}
-	if (mcp$acc.rate==1)
-	{
-  		acc_rate <- smp$acc.rate
-  		save(acc_rate, file=paste(outdir,"/acc_rate.mcmc",sep=""))
-	}  
-	warnings()
-}
+
+
 

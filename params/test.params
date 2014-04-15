@@ -1,4 +1,9 @@
-# initialisation
+# parameters for running the model
+#
+#
+
+#### INITIALISATION ####
+
 init <- list(
   B=list(
     br1=2,
@@ -13,6 +18,8 @@ init <- list(
   K=50,
   tr="random"
 )
+
+#### PARAMETER PRIOR DISTRIBUTIONS #### 
 
 # hyperparams
 hp <- list(
@@ -68,6 +75,8 @@ hp <- list(
   )
 )
 
+### PROPOSAL DISTRIBUTIONS ###
+
 # mcmc params
 mcp <- list(
   B=list(
@@ -113,17 +122,20 @@ mcp <- list(
     th=0.1
   ),
   Niters=200000,
-  acc.rate=1
+  acc.rate=1,
+  Np = 200,
+  Tmax = 10
 )
 
-# program options
+#### PROGRAM OPTIONS ####
+
 opt<-list(
   checkinit=0,
   chainvars=c("B","mr","tr", "dr","ll", "t_off", "Itraj"),
-  movevars= c("T", "T2",  "B", "mr", "t_off", "T3"),
-  #movevars= c("T", "T2", "T3"),
+  movevars= c("T", "mr", "dr", "t_off", "B", "bn"),
   firstN=c(9,10,13,18),
   #firstN=seq(2,6),
   seed=10000,
-  saveevery=1000
+  saveevery=1000,
+  
 )
