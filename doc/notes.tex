@@ -313,6 +313,23 @@ using the same distance measure as before.
 \caption{Possible underlying genealogy for two infected hosts with viral populations of size 5 and 3.}
 \end{figure}
 
+\section{Inference using particle MCMC}
+When making proposing a new genealogy $\mathcal{G}^*$, the acceptance rate will be low, because the branch lengths and inter-host topology are 
+constructed from independent samples of the underlying SIR process: simulated from $p(\mathbf{I}^* \mid \Theta_I^*)$ and then $p(\mathcal{G}^* \mid \mathbf{I}^*)$. 
+The samples of the genealogy are not guaranteed to be close in tree space. A better inference scheme would be to ensure that the proposed genealogies are consistent with the data,
+by simulating from $p(\mathbf{I}^* \mid \Theta_I^*)$, and then from $p(\mathcal{G}^* \mid \mathbf{I}^*, \mathcal{D})$. 
+
+To sample from $p(\mathcal{G}^* \mid \mathbf{I}^*, \mathcal{D})$, we use a particle filter, described below. The proposed $\{\mathcal{G}^*, \mathbf{I}^* , \Theta_I^*\}$ is accepted 
+with the Metropolis Hastings ratio:
+\begin{eqnarray}
+\alpha = \frac{\hat{p}(\mathcal{D} \mid \Theta_I^*)p(\Theta_I^*)q(\Theta_I\mid \Theta_I^*)}{\hat{p}(\mathcal{D} \mid \Theta_I)p(\Theta_I)q(\Theta_I^*\mid \Theta_I) }
+\end{eqnarray}
+where $\hat{p}(\mathcal{D} \mid \Theta_I)$ is the particle filter's estimate of marginal likelihood. 
+
+\subsection{Particle filter for trees}
+We use the notation: $g_n^k$ to denote a genealogy of the first $n$ sequences from $\mathcal{D}$, with index $k$, and the associated trajectory by $I_n^k$. The particle cloud is
+given by $\{\mathbf{g}_n, \mathbf{I}_n\}=\{g_n^k,  I_n^k \mid k=1,..,N_p\}$  
+
 \section{Summary}
 \begin{tabular}{|l|l|}
 \hline 
