@@ -64,6 +64,15 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
   # initialise model
   params <- cSIR_modelinit(x, init, dat, dat.params, mcmc.params)
   
+  # initialise priors
+  priors <- list()
+  priors$mr <- cSIR_mrprior(mr=params$mr, hp.params$mr, mode="d", is.log=TRUE)
+  priors$dr <- cSIR_drprior(dr=params$dr, hp.params$dr, mode="d", is.log=TRUE)
+  priors$B <- cSIR_Bprior(B=params$B, dat.params$NHosts, hp.params$B.br1, hp.params$B.br2, mode="d", is.log=TRUE)
+  priors$bn <- cSIR_bnprior(bn=params$bn, hp.params$bn, mode="d", is.log=TRUE)        
+  priors$t_off <- cSIR_t_offprior(t_off=params$t_off, hp.params$t_off, mode="d", is.log=TRUE)
+  params$priors <- priors
+  
   # initialise possible moves
   moves <- cSIR_movesinit(opt$movevars, vars) 
   
@@ -220,6 +229,8 @@ cSIR_modelinit <- function(x, init, dat, dat.params, mcmc.params)
   params$tr_list <- tr_list
   params$is.acc <- 0
   params$ll <- llcur
+  
+  
   return(params)
 }
 
@@ -405,16 +416,17 @@ cSIR_Tupdate<-function(x, params, dat.params, dat, hp.params, mcmc.params)
 	#tr_list <- cSIR_drawtr_list_smc2(x, params, dat.params, dat, mcmc.params)
 	tr_list <- cSIR_trproposal(x, params, dat.params, dat, hp.params, mcmc.params)
 	params$is.acc <- 0
+	priorsum <- sum(unlist(params$priors))
   	if (tr_list$is.acc==1)
 	{
 	  	llcur<-params$ll
 	  	print(tr_list$ll)
-      	pacc <- min(tr_list$ll - llcur, 0)	
+      	pacc <- min(tr_list$ll + priorsum - llcur, 0)	
       	
 	  	if (log(runif(1)) <= pacc)
 	  	{
 	    	params$tr_list <- tr_list
-	    	params$ll <- tr_list$ll
+	    	params$ll <- tr_list$ll + priorsum
 	    	params$is.acc <- 1
 	  	}  
 	}
@@ -448,12 +460,17 @@ cSIR_Bupdate <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 	{
 	  	llcur<-params$ll
 	  	print(tr_list$ll)
-      	pacc <- min(tr_list$ll - llcur, 0)	
+	  	oldprior <- params$priors$B
+	  	newprior <- cSIR_Bprior(newB, dat.params$NHosts, hp.params$B.br1, hp.params$B.br2, mode="d", is.log=TRUE)
+	  	newpriors <- newprior - params$priors$B + sum(unlist(params$priors))
+	  	
+      	pacc <- min(tr_list$ll + newpriors - llcur, 0)	
       	
 	  	if (log(runif(1)) <= pacc)
 	  	{
 	    	params$tr_list <- tr_list
-	    	params$ll <- tr_list$ll
+	    	params$priors$B <- newprior 
+	    	params$ll <- tr_list$ll + sum(unlist(params$priors))
 	    	params$is.acc <- 1
 	    	params$B <- newB
 	  	}  
@@ -491,12 +508,17 @@ cSIR_bnupdate <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 	{
 	  	llcur<-params$ll
 	  	print(tr_list$ll)
-      	pacc <- min(tr_list$ll - llcur, 0)	
+	  	oldprior <- params$priors$bn
+	  	newprior <- cSIR_bnprior(newbn, hp.params$bn, mode="d", is.log=TRUE)
+	  	newpriors <- newprior - params$priors$bn + sum(unlist(params$priors))
+	  	
+      	pacc <- min(tr_list$ll + newpriors - llcur, 0)	
       	
 	  	if (log(runif(1)) <= pacc)
 	  	{
 	    	params$tr_list <- tr_list
-	    	params$ll <- tr_list$ll
+	    	params$priors$bn <- newprior
+	    	params$ll <- tr_list$ll + sum(unlist(params$priors))
 	    	params$is.acc <- 1
 	    	params$bn <- newbn
 	    	params$K <- newK
@@ -533,12 +555,17 @@ cSIR_drupdate <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 	{
 	  	llcur<-params$ll
 	  	print(tr_list$ll)
-      	pacc <- min(tr_list$ll - llcur, 0)	
+	  	oldprior <- params$priors$dr
+	  	newprior <- cSIR_drprior(newdr, hp.params$dr, mode="d", is.log=TRUE)
+	  	newpriors <- newprior - params$priors$dr + sum(unlist(params$priors))
+	  	
+      	pacc <- min(tr_list$ll + newpriors - llcur, 0)	
       	
 	  	if (log(runif(1)) <= pacc)
 	  	{
 	    	params$tr_list <- tr_list
-	    	params$ll <- tr_list$ll
+	    	params$priors$dr <- newprior
+	    	params$ll <- tr_list$ll + sum(unlist(params$priors))
 	    	params$is.acc <- 1
 	    	params$dr <- newdr
 	  	}  
@@ -574,12 +601,17 @@ cSIR_mrupdate <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 	{
 	  	llcur<-params$ll
 	  	print(tr_list$ll)
-      	pacc <- min(tr_list$ll - llcur, 0)	
+	  	
+	  	oldprior <- params$priors$mr
+	  	newprior <- cSIR_mrprior(newmr, hp.params$mr, mode="d", is.log=TRUE)
+	  	newpriors <- newprior - params$priors$mr + sum(unlist(params$priors))
+	  	pacc <- min(tr_list$ll + newpriors - llcur , 0)	
       	
 	  	if (log(runif(1)) <= pacc)
 	  	{
 	    	params$tr_list <- tr_list
-	    	params$ll <- tr_list$ll
+	    	params$priors$mr <- newprior
+	    	params$ll <- tr_list$ll + sum(unlist(params$priors))
 	    	params$is.acc <- 1
 	    	params$mr <- newmr
 	  	}  
@@ -615,12 +647,16 @@ cSIR_t_offupdate <- function(x, params, dat.params, dat, hp.params, mcmc.params)
 	{
 	  	llcur<-params$ll
 	  	print(tr_list$ll)
-      	pacc <- min(tr_list$ll - llcur, 0)	
-      	
+	  	oldprior <- params$priors$mr
+	  	newprior <- cSIR_t_offprior(newt_off, hp.params$t_off, mode="d", is.log=TRUE)
+	  	newpriors <- newprior - params$priors$t_off + sum(unlist(params$priors))
+	  	pacc <- min(tr_list$ll + newpriors - llcur , 0)	
+      
 	  	if (log(runif(1)) <= pacc)
 	  	{
 	    	params$tr_list <- tr_list
-	    	params$ll <- tr_list$ll
+	    	params$priors$t_off <- newprior
+	    	params$ll <- tr_list$ll + sum(unlist(params$priors))
 	    	params$is.acc <- 1
 	    	params$t_off <- newt_off
 	  	}  
