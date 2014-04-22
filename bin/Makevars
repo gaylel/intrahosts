@@ -1,0 +1,4 @@
+PKG_CPPFLAGS=$(pkg-config --cflags hmsbeagle-1)
+PKG_LIBS=`pkg-config --libs hmsbeagle-1` -lgomp `SHLIB_OPENMP_CFLAGS`
+PKG_CFLAGS=-fopenmp `pkg-config --cflags hmsbeagle-1` #$(SHLIB_OPENMP_CFLAGS)
+

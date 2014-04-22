@@ -156,7 +156,8 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
     	if (t %% 1 == 0)
     	{
     		print(sprintf("%s %i loglikelihood   %8.4f   Mutation rate   %8.8f  Death rate %8.4f BN %8.4f t_off %8.4f %i Move %i", format(Sys.time(), "%X"), t, params$ll, params$mr, params$dr,params$bn, params$t_off, params$K, m))
-	
+			print(params$B)
+			print(t(params$tr_list$Itraj))
 		}
 	
     
@@ -205,6 +206,7 @@ cSIR_modelinit <- function(x, init, dat, dat.params, mcmc.params)
   
   SN <- dat$SN
   Bcon <- cSIR_Bstruct(ST=ST) 
+  Bcon <- init$Bcon
   if (!is.matrix(init$B))
   {
   	B <- cSIR_Binit(init, Bcon)

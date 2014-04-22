@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <limits.h>
+#include <omp.h>
 #include "llists.h"
 #include "phylo.h"
 #include "leaf.h"
@@ -387,11 +388,11 @@ SEXP smc_draw_R(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R
 		//Rprintf("free particle\n") ;
 		//smc_freeparticle(&sp_old[i]) ;
 		//smc_freeparticle(si[i].sp) ;
-		Free(si->sir1[i][0]) ;
-		Free(si->sir1[i][1]) ;
-		Free(si->sir1[i][2]) ;
+		free(si->sir1[i][0]) ;
+		free(si->sir1[i][1]) ;
+		free(si->sir1[i][2]) ;
 		free(si->sir1[i]) ;
-		Free(si->sir2[i][0]) ;
+		free(si->sir2[i][0]) ;
 		free(si->sir2[i]) ;
 		if (i != smp)
 		{
@@ -512,11 +513,11 @@ SEXP smc_draw_prior_R(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, 
 		//Rprintf("free particle\n") ;
 		//smc_freeparticle(&sp_old[i]) ;
 		//smc_freeparticle(si[i].sp) ;
-		Free(si[i].sir1[0]) ;
-		Free(si[i].sir1[1]) ;
-		Free(si[i].sir1[2]) ;
+		free(si[i].sir1[0]) ;
+		free(si[i].sir1[1]) ;
+		free(si[i].sir1[2]) ;
 		free(si[i].sir1) ;
-		Free(si[i].sir2[0]) ;
+		free(si[i].sir2[0]) ;
 		free(si[i].sir2) ;
 		if (si[i].sp->mig)
 		{
@@ -546,6 +547,7 @@ int smc_trajcheck(int *SN, int *Iend, int NHosts)
 	int i ;
 	for (i=0 ; i<NHosts ; i++)
 	{
+		
 		if (SN[i] > Iend[i])
 		{
 			is_acc = 0 ;
@@ -627,10 +629,10 @@ smcinfo* smc_draw_prior(int Np, int I0, int NS, int NHosts, double *B, double dr
 			traj_acc[i] = smc_trajcheck(SN, p_RVAL1[i][2], NHosts) ;
 			if (traj_acc[i] == 0)
 			{
-				Free(p_RVAL1[i][0]) ;
-				Free(p_RVAL1[i][1]) ;
-				Free(p_RVAL1[i][2]) ;
-				Free(p_RVAL2[i][0]) ;
+				free(p_RVAL1[i][0]) ;
+				free(p_RVAL1[i][1]) ;
+				free(p_RVAL1[i][2]) ;
+				free(p_RVAL2[i][0]) ;
 			}
 		}
 		Rprintf("%i\t%i\t%i\n", n[i], traj_acc[i], i) ;
@@ -676,7 +678,8 @@ smcinfo* smc_draw_prior(int Np, int I0, int NS, int NHosts, double *B, double dr
 smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, double *ST, int *SN, double bnprob, int K, int NSeqs, int NSites, int** seqs, int* w, double mu)
 {
 	// draws a tree and trajectory based on an smc algorithm
-	
+	int nthreads = omp_get_num_threads() ;
+	Rprintf("number of threads = %i\n", nthreads) ;
 	// setup helper variables 
 	int i, j ;
 	double n_eff , n_eff_th = 1 * Np ;				// effective size of particle population
@@ -703,10 +706,17 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	int *s = calloc(Np, sizeof(int)) ;
 	int *traj_acc = calloc(Np, sizeof(int)) ;	//indicator vector of whether trajectory is accepted
 	int n_acc=0;
-	int ti, k ;
+	int ti, k , *b_inst ;
 	// draw Np trajectories
+	int chunk = Np / 4 ;
+	int tid ;
+	#pragma omp parallel shared(traj_acc,chunk) private(i)
+	{
+	#pragma omp for schedule(dynamic,chunk) nowait
 	for (i=0 ; i<Nt ; i++)
 	{
+		//tid = omp_get_thread_num() ;
+		//Rprintf("%i %i\n", tid, i) ;
 		p_RVAL1[i] = calloc(3, sizeof(int*)) ;
 		p_RVAL2[i] = calloc(1, sizeof(double*)) ;
 		traj_acc[i] = 0 ;
@@ -714,21 +724,26 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 		{
 			cSIR_iters_ST(&n[i], I0, NS, NHosts, B, dr, p_RVAL1[i], p_RVAL2[i], ST, SN, bnprob, K) ;
 			traj_acc[i] = smc_trajcheck(SN, p_RVAL1[i][2], NHosts) ;
+			
 			if (traj_acc[i] == 0)
 			{
-				Free(p_RVAL1[i][0]) ;
-				Free(p_RVAL1[i][1]) ;
-				Free(p_RVAL1[i][2]) ;
-				Free(p_RVAL2[i][0]) ;
+				free(p_RVAL1[i][0]) ;
+				free(p_RVAL1[i][1]) ;
+				free(p_RVAL1[i][2]) ;
+				free(p_RVAL2[i][0]) ;
 			}
 		}
 		//Rprintf("%i\t%i\t%i\n", n[i], traj_acc[i], i) ;
 		//Rprintf("%8.4f\t%8.4f\t%8.4f\t%8.4f\n", p_RVAL2[i][0][4], p_RVAL2[i][0][5], p_RVAL2[i][0][6], p_RVAL2[i][0][7]) ;
 		n_acc += traj_acc[i] ;
 	}
+	}
+	
+	
 	Rprintf("%i\n", n_acc) ;
 	for (i=0 ; i<Np ; i++)
 	{
+		//Rprintf("%i %i %i\n", p_RVAL1[i][2][0], p_RVAL1[i][2][1], p_RVAL1[i][2][2]) ;
 		p[i] = (traj_acc[i]==1) ? (double)1 / n_acc : 0 ;
 	}
 	smc_resample(Np, Nt, p, s, 2) ;
@@ -739,15 +754,39 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	smc_obs(SN, NHosts, 0, OBS2) ;
 	
 	// Draw Np particles - subtrees of size 2 ~ p(g_2)
+	#pragma omp parallel shared(chunk) private(i)
+	{
+	#pragma omp for schedule(dynamic,chunk) nowait
 	for (i=0 ; i<Np ; i++)
 	{
 		ti = s[i] ;							// index of trajectory to use
 		sp[i].sir_i = ti ;
 		smc_treereconstruct(p_RVAL1[ti][1], p_RVAL2[ti][0], NHosts, n[ti], SN, ST, OBS, OBS2, 0, 0, 0, 0, &sp[i]) ;
 		// likelihood based on felsenstein pruning algorithm: log p(d_2 | g_2^k, mu)
-		p[i] = beagle_init(2, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, 1);						
+		//p[i] = beagle_init(2, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, 1);		
+	}
 	}
 	
+	//b_inst = beagle_init_instances(2, NSites, 1, Np) ;
+	for (i=0 ; i<Np ; i++)
+	{
+	//	Rprintf("%i\n", b_inst[i]) ;
+	}
+	
+	//#pragma omp parallel shared(chunk, b_inst, p) private(i)
+//	{
+//	#pragma omp for schedule(dynamic,chunk) nowait
+	for (i=0 ; i<Np ; i++)
+	{
+		p[i] = beagle_init(2, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, 1);				
+	//	Rprintf("%i\n", b_inst[i]) ;	
+		//p[i] = beagle_update_instance(b_inst[i], 2, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, 1);
+	}
+//	}
+	
+//	beagle_free_instances(Np, b_inst) ;
+//	free(b_inst) ;
+	//Rprintf("freed instances\n") ;
 	// approximation to log p(d_2 | mu)
 	Ltot = smc_logspace_add(p, Np) ;
 	
@@ -775,7 +814,7 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	
 	for (j=2 ; j<(NSeqs) ; j++)
 	{
-	//	Rprintf("j = %i\n", j) ;
+		//Rprintf("j = %i\n", j) ;
 		smc_obs(SN, NHosts, j+1, OBS) ;
 		smc_obs(SN, NHosts, j, OBS2) ;
 		for (i=0 ; i<NHosts ; i++)
@@ -793,7 +832,9 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 			//phylo_free(sp[i].tr) ;
 			//sp[i].tr = 0 ;
 		}	
-	
+		#pragma omp parallel shared(chunk) private(i)
+		{
+		#pragma omp for schedule(dynamic,chunk) nowait
 		for (i=0 ; i<Np ; i++)
 		{
 			ti = sp_old[s[i]].sir_i ;
@@ -804,17 +845,37 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 			//Rprintf("parent = %i, old tree at %p, old mig at   %p\n", s[i], sp_old[s[i]].tr, sp_old[s[i]].mig) ;
 			smc_treereconstruct(p_RVAL1[ti][1], p_RVAL2[ti][0], NHosts, n[ti], SN, ST, OBS, OBS2, 1, sp_old[s[i]].tr, sp_old[s[i]].mig, sp_old[s[i]].mig_n, &sp[i]) ;
 			//Rprintf("recon tree\n") ;
-			for (k=0 ; k<sp[i].tr->Nedge ; k++)
-			{
+			//for (k=0 ; k<sp[i].tr->Nedge ; k++)
+			//{
 				//Rprintf("%i %i\n", sp[i].tr->edge[k][0], sp[i].tr->edge[k][1]) ;
-			}
+			//}
 			
-			p[i] = beagle_init(j+1, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, j);
+			//p[i] = beagle_init(j+1, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, j);
 		}
+		}
+//		Rprintf("Initialising\n") ;
+		//b_inst = beagle_init_instances(j+1, NSites, j, Np) ;
+//	Rprintf("Instances\n") ;
+	for (i=0 ; i<Np ; i++)
+	{
+//		Rprintf("%i\n", b_inst[i]) ;
+	}
+//	#pragma omp parallel shared(chunk, b_inst, p) private(i)
+//	{
+//	#pragma omp for schedule(dynamic,chunk) nowait
+	  for (i=0 ; i<Np ; i++)
+		{
+			p[i] = beagle_init(j+1, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, j);
+			//p[i] = beagle_update_instance(b_inst[i], j+1, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, j);
+	
+		}
+//		}
 		
+//		beagle_free_instances(Np, b_inst) ; 
+//		free(b_inst) ;
+//		Rprintf("freed instances\n") ;
 		for (i=0 ;  i<Np ;i++)
 		{
-			
 			//Rprintf("freeing particle %i at %p, with tr at %p, mig at %p\n", i, &sp_old[i], sp_old[i].tr, sp_old[i].mig) ;
 			smc_freeparticle(&sp_old[i]) ;
 		//	Rprintf("new particle %i at %p, with tr at %p, mig at %p\n", i, &sp[i], sp[i].tr, sp[i].mig) ;
@@ -869,11 +930,11 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	for (i=0 ; i<Nt ; i++)
 	{
 		//Rprintf("%i ", sp[i].sir_i) ;
-		Free(p_RVAL1[i][0]) ;
-		Free(p_RVAL1[i][1]) ;
-		Free(p_RVAL1[i][2]) ;
+		free(p_RVAL1[i][0]) ;
+		free(p_RVAL1[i][1]) ;
+		free(p_RVAL1[i][2]) ;
 		free(p_RVAL1[i]) ;
-		Free(p_RVAL2[i][0]) ;
+		free(p_RVAL2[i][0]) ;
 		free(p_RVAL2[i]) ;
 	}
 	//Rprintf("\n") ;
@@ -910,9 +971,9 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 SEXP sample_cSIR_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr)
 {
 	
-	int I0, NS, NHosts, *S, *I, *T, *R, **p_RVAL1 = Calloc(2,int*),*n=Calloc(1,int),i,j;
+	int I0, NS, NHosts, *S, *I, *T, *R, **p_RVAL1 = calloc(2,sizeof(int*)),*n=calloc(1, sizeof(int)),i,j;
 	int *PR_I, *PR_S;
-	double *B, **p_RVAL2 = Calloc(1,double*), dr, *PR_T ;
+	double *B, **p_RVAL2 = calloc(1, sizeof(double*)), dr, *PR_T ;
 	
 	
 	SEXP R_Bdim, R_I, R_T, R_S, R_list ;
@@ -974,9 +1035,9 @@ SEXP sample_cSIR_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr)
 SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN, SEXP R_bnprob, SEXP R_K)
 {
 	
-	int I0, NS, NHosts, *S, *I, *T, *R, **p_RVAL1 = Calloc(3,int*),*n=Calloc(1,int),i,j;
+	int I0, NS, NHosts, *S, *I, *T, *R, **p_RVAL1 = calloc(3, sizeof(int*)),*n=calloc(1, sizeof(int)),i,j;
 	int *PR_I, *PR_S, *PR_Iend, *SN, K;
-	double *B, **p_RVAL2 = Calloc(1,double*), dr, *PR_T, *ST, bnprob ;
+	double *B, **p_RVAL2 = calloc(1, sizeof(double*)), dr, *PR_T, *ST, bnprob ;
 	
 	
 	SEXP R_Bdim, R_I, R_T, R_S, R_Iend, R_list ;
@@ -1057,13 +1118,13 @@ SEXP sample_cSIR_S_R(SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, S
 	SET_VECTOR_ELT(R_list, 2, R_T) ;
 	SET_VECTOR_ELT(R_list, 3, R_Iend) ;
 	UNPROTECT(5) ;
-	Free(p_RVAL1[0]) ;
-	Free(p_RVAL1[1]) ;
-	Free(p_RVAL1[2]) ;
-	Free(p_RVAL1) ;
-	Free(p_RVAL2[0]) ;
-	Free(p_RVAL2) ;
-	Free(n) ;
+	free(p_RVAL1[0]) ;
+	free(p_RVAL1[1]) ;
+	free(p_RVAL1[2]) ;
+	free(p_RVAL1) ;
+	free(p_RVAL2[0]) ;
+	free(p_RVAL2) ;
+	free(n) ;
 	
 	return(R_list);
 }
@@ -1385,14 +1446,14 @@ double ** Migmx_addnode(int mig_n, double **mig, double t, int ha, int hb, int N
 		//Rprintf("%i\n", mig_n) ;
 		if (mig_n == 1)				
 		{
-			mig = Calloc(mig_n, double *) ;
-			mig[0] = Calloc(4, double) ;
+			mig = calloc(mig_n, sizeof(double *)) ;
+			mig[0] = calloc(4, sizeof(double)) ;
 					
 		}
 		else
 		{
-			mig = Realloc(mig, mig_n, double *) ;
-			mig[mig_n - 1] = Calloc(4, double) ;
+			mig = realloc(mig, mig_n * sizeof(double *)) ;
+			mig[mig_n - 1] = calloc(4, sizeof(double)) ;
 		}
 		mig[mig_n - 1][0] = t ; 
 		mig[mig_n - 1][1] = ha ; 
@@ -1474,10 +1535,10 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 	
 	int j, k=0, ha, hb, oa, ob, Ntrans ;
 	double ***PR_T2, ttmp ;
-	PR_T2 = Calloc(4,double**) ;	//reshape(PR_T)
+	PR_T2 = calloc(4, sizeof(double**)) ;	//reshape(PR_T)
 	for (j=0 ; j<4 ; j++)
 	{
-		PR_T2[j] = Calloc(TN,double*) ;
+		PR_T2[j] = calloc(TN, sizeof(double*)) ;
 		
 	}
 	
@@ -1489,7 +1550,7 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 		}
 	}
 	
-	int *Tend = Calloc(NHosts,int) ; // times at which hosts are sampled
+	int *Tend = calloc(NHosts, sizeof(int)) ; // times at which hosts are sampled
 	for (i=0 ; i< TN ; i++)
 	{
 		ha = (int) *PR_T2[1][i] ;
@@ -1508,11 +1569,11 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 		ntips+= OBS[i] + OBS2[i] ;
 		lambdao[i] = calloc(NHosts, sizeof(double)) ;
 	}
-	hnode2 * Nodes = Calloc(NHosts,hnode2) ; 
-	hnode2 * Nodes2 = Calloc(NHosts, hnode2) ;
-	hnode2 * tNodes = Calloc(1,hnode2) ; 
-	hnode2 * tNodes2 = Calloc(1, hnode2) ;
-	int *NI = Calloc(NHosts, int) ;
+	hnode2 * Nodes = calloc(NHosts,sizeof(hnode2)) ; 
+	hnode2 * Nodes2 = calloc(NHosts, sizeof(hnode2)) ;
+	hnode2 * tNodes = calloc(1,sizeof(hnode2)) ; 
+	hnode2 * tNodes2 = calloc(1, sizeof(hnode2)) ;
+	int *NI = calloc(NHosts, sizeof(int)) ;
 	
 	
 	for (i=0 ; i<NHosts ; i++)
@@ -1527,8 +1588,8 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 	
 	phylo *tr = phylo_create(ntips) ;
 	
-	int *ch = Calloc(4, int) ;		// vector of child nodes and indices
-	int * ov = Calloc(2, int) ;
+	int *ch = calloc(4, sizeof(int)) ;		// vector of child nodes and indices
+	int * ov = calloc(2, sizeof(int)) ;
 	
 	int ei = tr->Nedge - 1 ;		// index of edges
 	int intNode = 2*tr->NNode  ;	// index of internal node
@@ -1947,7 +2008,7 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 
 	for (j= 0; j< 4 ; j++)
 	{
-		Free(PR_T2[j]) ;
+		free(PR_T2[j]) ;
 	}
 	
 	
@@ -1963,14 +2024,14 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 	llist_destroy_d(tNodes->t)  ;
 	llist_destroy_i(tNodes2->n)  ;
 	llist_destroy_d(tNodes2->t)  ;
-	Free(Nodes) ; 
-	Free(Nodes2) ;
-	Free(tNodes) ;
-	Free(tNodes2) ;
-	Free(Tend) ;  
-	Free(ch) ;
-	Free(ov) ;
-	Free(PR_T2) ;
+	free(Nodes) ; 
+	free(Nodes2) ;
+	free(tNodes) ;
+	free(tNodes2) ;
+	free(Tend) ;  
+	free(ch) ;
+	free(ov) ;
+	free(PR_T2) ;
  	free(SNsum) ;
  	free(Anc) ;
  	free(lambdao) ;
@@ -1980,14 +2041,14 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
  		
  		for (i=0 ; i<tr_old->NNode ; i++)
  		{
- 			Free(bt_old[i]) ;
+ 			free(bt_old[i]) ;
  		}
  		
- 		Free(bt_old) ;
+ 		free(bt_old) ;
  		phylo_free(tr_old) ;
  		
 	}
-	Free(NI) ;
+	free(NI) ;
 
 	//Rprintf("end\n") ;
 	sp->tr = tr ;
@@ -2018,9 +2079,9 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 		
 	for (k=0 ; k<mig_n ; k++)
 	{
-		Free(mig[k]) ;
+		free(mig[k]) ;
 	}
-	Free(mig) ;
+	free(mig) ;
 	}
 	sp->mig_n = mig_n ;
 	//Rprintf("end\n") ;
@@ -2064,9 +2125,9 @@ void cSIR_iters(int *n, int I0, int nS, int NHosts, double *B, double dr, int **
 	int *pp1[2];
 	double *pp2[1] ;
 	
-	pp1[0]= Calloc(NHosts,int) ;
-	pp1[1]= Calloc(NHosts,int) ;
-	pp2[0]= Calloc(4,double) ;
+	pp1[0]= calloc(NHosts, sizeof(int)) ;
+	pp1[1]= calloc(NHosts, sizeof(int)) ;
+	pp2[0]= calloc(4, sizeof(double)) ;
 	
 	int i ;
 	for (i=0; i<NHosts ; i++)
@@ -2142,12 +2203,12 @@ void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int
 	 if (tmax<ST[i]) tmax = ST[i] ;
 	}
 	
-	pp1=Calloc(3,int*) ;
-	pp2=Calloc(1,double*) ;
-	pp1[0]= Calloc(NHosts,int) ;
-	pp1[1]= Calloc(NHosts,int) ;
-	pp1[2] = Calloc(NHosts, int) ;
-	pp2[0]= Calloc(4,double) ;
+	pp1=calloc(3, sizeof(int*)) ;
+	pp2=calloc(1, sizeof(double*)) ;
+	pp1[0]= calloc(NHosts, sizeof(int)) ;
+	pp1[1]= calloc(NHosts, sizeof(int)) ;
+	pp1[2] = calloc(NHosts, sizeof(int)) ;
+	pp2[0]= calloc(4,sizeof(double)) ;
 	
 	
 	for (i=0; i<NHosts ; i++)
@@ -2186,8 +2247,8 @@ void cSIR_iters_ST(int *n, int I0, int nS, int NHosts, double *B, double dr, int
 	pp1[1]=0;
 	pp1[2]=0;
 	pp2[0]=0;
-	Free(pp1) ;
-	Free(pp2) ;
+	free(pp1) ;
+	free(pp2) ;
 	n[0]--	;
   free(bnsizes) ;
 }
@@ -2262,7 +2323,7 @@ void cSIR_iter(int n, int nS, int NHosts, double *B, double dr, int **p1, double
   *********/
   
 	double *R, sumR=0, t_n, Rtot, *T, rand_e;	// rate matrix
-	R = Calloc(NHosts * (NHosts+1),double) ;
+	R = calloc(NHosts * (NHosts+1), sizeof(double)) ;
 	int i,j,e,ec,er, *S, *I, In, Sn, np;
 	
 	S=p1[0];
@@ -2348,8 +2409,8 @@ void cSIR_iter(int n, int nS, int NHosts, double *B, double dr, int **p1, double
 void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, double **p2, double *ST, int *SN, int * bnsizes)
 {
 	double *R, sumR=0, t_n, Rtot, *T, rand_e, *ST2, T_n, t_n1;	// rate matrix
-	R = Calloc(NHosts * (NHosts+1),double) ;
-	ST2 = Calloc(NHosts,double) ;
+	R = calloc(NHosts * (NHosts+1), sizeof(double)) ;
+	ST2 = calloc(NHosts, sizeof(double)) ;
 	int i, j,e,ec,er, *S, *I, *Iend, n, h_i, In, Sn, bn, bnsize, all_out=0;
 	
 	S=p1[0];
@@ -2551,6 +2612,6 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 	T=0;
 	Iend=0;
 	np[0] = n ;
-	Free(R) ;
-	Free(ST2) ;
+	free(R) ;
+	free(ST2) ;
 }

@@ -12,7 +12,8 @@ beaglefuncs.o:	beaglefuncs.c
 	gcc -fPIC -c beaglefuncs.c -I. -I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle -g
 
 cSIR.so:	beaglefuncs.o
-	R CMD SHLIB cSIR.c llists.c phylo.c leaf.c beaglefuncs.o -I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle -g
+	#R CMD SHLIB cSIR.c llists.c phylo.c leaf.c beaglefuncs.o -I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle -g
+	R CMD SHLIB cSIR.c llists.c phylo.c leaf.c beaglefuncs.o 
 
 #runmodel: cSIR.so
 #	./cSIRrun.sh 
@@ -111,3 +112,6 @@ debugdata:
 debugrun.%:
 	R --slave --vanilla --args $* ../debug  < testmodel.R			
 	#R -d "valgrind --tool=memcheck --leak-check=full --dsymutil=yes" --vanilla --args $* ../debug < testmodel.R
+
+omptest:
+	gcc -fopenmp ompfuncs.c -o ompfuncs
