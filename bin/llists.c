@@ -5,7 +5,7 @@ item_i * llist_add_el_i(int val_i, item_i* cur)
 {
 	item_i *ptr, *head ;
 	head = cur ; 
-	ptr = Calloc(1,item_i) ;
+	ptr = calloc(1, sizeof(item_i)) ;
 	ptr->val = val_i ;
 	ptr->next = (item_i *) NULL ;
 	
@@ -36,7 +36,7 @@ int llist_destroy_i(item_i * cur )
 	while (cur!=NULL)
 	{
 		del=cur->next ;
-		Free(cur) ;
+		free(cur) ;
 		cur=del;
 	}
 	
@@ -49,7 +49,7 @@ int llist_destroy_d(item_d * cur )
 	while (cur!=NULL)
 	{
 		del=cur->next ;
-		Free(cur) ;
+		free(cur) ;
 		cur=del;
 	}
 	return 0 ;
@@ -59,7 +59,7 @@ item_d * llist_add_el_d(double val_d, item_d* cur)
 {
 	item_d *ptr , * head;
 	head = cur ;
-	ptr = Calloc(1,item_d) ;
+	ptr = calloc(1, sizeof(item_d)) ;
 	ptr->val = val_d ;
 	ptr->next = NULL ;
 	if (cur != NULL)
@@ -153,7 +153,7 @@ item_i *llist_delete_el_i(int ind, item_i *cur)
 		del = ptr ;
 	}
 	
-	Free(del) ;
+	free(del) ;
 	del = NULL ;
 	return head ;
 }
@@ -182,7 +182,7 @@ item_d *llist_delete_el_d(int ind, item_d *cur)
 		del = ptr ;
 	}
 	
-	Free(del) ;
+	free(del) ;
 	del = NULL ;
 	return head ;
 }

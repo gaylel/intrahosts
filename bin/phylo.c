@@ -5,18 +5,18 @@ phylo* phylo_create(int ntips)
 {
 	int Nedges = (ntips-1)*2, m, n ;
 	phylo *tr ;
-	tr=Calloc(1,phylo);
+	tr=calloc(1,sizeof(phylo));
 	tr->Nedge=Nedges ;
-	tr->el=Calloc(Nedges,double) ;
+	tr->el=calloc(Nedges,sizeof(double)) ;
 	tr->NNode=ntips-1 ;
-	tr->edge=Calloc(Nedges, int*) ;
-	tr->nodelabel=Calloc(tr->NNode,int) ;
+	tr->edge=calloc(Nedges, sizeof(int*)) ;
+	tr->nodelabel=calloc(tr->NNode,sizeof(int)) ;
 	for (m=0 ; m< Nedges ; m++)
 	{
-		tr->edge[m] = Calloc(2, int) ;
+		tr->edge[m] = calloc(2, sizeof(int)) ;
 	}
 	
-	tr->tiplabel=Calloc(ntips,int) ;
+	tr->tiplabel=calloc(ntips,sizeof(int)) ;
 	for (m=0 ; m< ntips ; m++)
 	{
 		tr->tiplabel[m]=m ;
@@ -46,14 +46,14 @@ void phylo_free(phylo *tr)
 	int i ;
 	for (i=0 ; i<tr->Nedge ; i++)
 	{
-		Free(tr->edge[i]) ;
+		free(tr->edge[i]) ;
 	}
-	Free(tr->edge) ;
-	Free(tr->el) ;
+	free(tr->edge) ;
+	free(tr->el) ;
 	//Free(tr->edge) ;
-	Free(tr->tiplabel) ;
-	Free(tr->nodelabel) ;
-	Free(tr) ;
+	free(tr->tiplabel) ;
+	free(tr->nodelabel) ;
+	free(tr) ;
 }
 
 
@@ -65,8 +65,8 @@ double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)
 	int NTips=tr->NNode+1, i, j, k, Ni, *hosts, ch1, ch2 ;
 	double **bt, *tips ;
 	// create structures
-	hosts=Calloc(NTips+tr->NNode,int) ;
-	tips=Calloc(NTips+tr->NNode,double) ;
+	hosts = calloc(NTips+tr->NNode,sizeof(int)) ;
+	tips = calloc(NTips+tr->NNode, sizeof(double)) ;
 	k=0 ;
 	for (i=0 ; i<NHosts ; i++)
 	{
@@ -83,10 +83,10 @@ double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)
 		hosts[k++]=tr->nodelabel[i] ;
 	}
 
-	bt=Calloc(tr->NNode, double*) ;
+	bt = calloc(tr->NNode, sizeof(double*)) ;
 	for (i=0 ; i< tr->NNode ; i++)
 	{
-		bt[i]=Calloc(4, double) ;
+		bt[i] = calloc(4, sizeof(double)) ;
 	}
 	
 	for (i=tr->NNode-1 ; i>=0 ; i--)
@@ -105,8 +105,8 @@ double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)
 		//Rprintf("%8.4f %i %i %i\n", bt[i][0], hosts[Ni], hosts[ch1], hosts[ch2]) ; 
 		
 	}
-	Free(hosts) ;
-	Free(tips) ;
+	free(hosts) ;
+	free(tips) ;
 	return bt ;
 }
 
