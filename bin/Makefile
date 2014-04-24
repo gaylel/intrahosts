@@ -8,8 +8,11 @@ BEAGLEFLAGS="-I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle"
 #cSIR.so:	cSIR.c llists.c phylo.c leaf.c
 #	R CMD SHLIB cSIR.c llists.c phylo.c leaf.c -I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle
 
+#beaglefuncs.o:	beaglefuncs.c
+#	gcc -fPIC -c beaglefuncs.c -I. -I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle -g
+
 beaglefuncs.o:	beaglefuncs.c
-	gcc -fPIC -c beaglefuncs.c -I. -I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle -g
+	gcc -c beaglefuncs.c `pkg-config --cflags --libs hmsbeagle-1`
 
 cSIR.so:	beaglefuncs.o
 	#R CMD SHLIB cSIR.c llists.c phylo.c leaf.c beaglefuncs.o -I/usr/local/include/libhmsbeagle-1 -L/usr/local/lib -lhmsbeagle -g
