@@ -9,9 +9,18 @@ cSIR_runmodel <- function(outdir, datadir, paramfile)
 	load(file=paste(datadir,"/seqs.RData",sep="")) ;
 	if (!is.null(opt$firstN))
 	{
+		inds <- c(0, cumsum(dat$SN))
   		dat$SN<-dat$SN[opt$firstN] ;
   		dat$ST<-dat$ST[opt$firstN] ;
   		dat$info<-dat$info[opt$firstN] ;
+  		
+  		inds_s <- NULL
+  		h <- opt$firstN 
+  		for (i in 1:length(h))
+  		{
+  			inds_s <- c(inds_s, seq(inds[h[i]]+1, inds[h[i]+1]))
+  		}
+  		seqs <- seqs[inds_s]
 	}
 
 	opt$outdir <- outdir
@@ -82,7 +91,9 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
   ch <- cSIR_chainsupdate(ch, opt$chainvars, params)
   
   # convert data 
+  
   x <- phyDat(x) 
+  str(x)
   
   Ninstances = 1 
   #Ninstances = mcmc.params$Np 
