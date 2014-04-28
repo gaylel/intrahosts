@@ -93,6 +93,11 @@ int smc_trajcheck(int *SN, int *Iend, int NHosts) ;
 void smc_freeparticle(smcparticle *sp) ;
 SEXP smc_draw_prior_R(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN, SEXP R_bnprob, SEXP R_K) ;
 smcinfo* smc_draw_prior(int Np, int I0, int NS, int NHosts, double *B, double dr, double *ST, int *SN, double bnprob, int K) ;
+SEXP smc_init_R(SEXP R_NInstances, SEXP R_seqs, SEXP R_w, SEXP R_Nseqs, SEXP R_NSites) ;
+void smc_init(int NInstances, int **seqs, int *w, int NSeqs, int NSites) ;
+SEXP smc_draw_R_old(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN, SEXP R_bnprob, SEXP R_K, SEXP R_seqs, SEXP R_Nseqs, SEXP R_NSites, SEXP R_w, SEXP R_mu) ;
+smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, double *ST, int *SN, double bnprob, int K, int NSeqs, int NSites, int** seqs, int* w, double mu) ;
+SEXP smc_free_instances_R(SEXP R_NInstances) ;
 
 void beagle_init_R(SEXP R_seqs, SEXP R_Nseqs, SEXP R_NSites, SEXP R_w, SEXP R_tr)
 {
@@ -275,7 +280,82 @@ double smc_logspace_add(double *logx, int xl)
 		
 }
 
-SEXP smc_draw_R(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN, SEXP R_bnprob, SEXP R_K, SEXP R_seqs, SEXP R_Nseqs, SEXP R_NSites, SEXP R_w, SEXP R_mu)
+SEXP smc_free_instances_R(SEXP R_NInstances)
+{
+	int NInstances = INTEGER(coerceVector(R_NInstances, INTSXP))[0] ;		// number of instances
+	int i ;
+	for (i=0 ; i<NInstances ; i++)
+	{
+		beagleFinalizeInstance(i);
+	}
+	SEXP R_rv ;
+	PROTECT(R_rv = allocVector(INTSXP, 1)) ; 
+	INTEGER(R_rv)[0] = 0 ;
+	UNPROTECT(1) ;
+	// do we return instances here?
+	return R_rv ;
+}
+
+SEXP smc_init_R(SEXP R_NInstances, SEXP R_seqs, SEXP R_w, SEXP R_Nseqs, SEXP R_NSites)
+{
+	int NInstances = INTEGER(coerceVector(R_NInstances, INTSXP))[0] ;		// number of instances
+	int NSeqs, NSites, *seq, i, j, **seqs, *w, rv;
+	SEXP R_seq;
+	
+	NSeqs = INTEGER(coerceVector(R_Nseqs, INTSXP))[0] ;		// number of sequences
+	NSites = INTEGER(coerceVector(R_NSites, INTSXP))[0] ;	// number of site patterns per sequence
+	seqs = calloc(NSeqs, sizeof(int*)) ;					// coded vectors for sequences
+	w = calloc(NSites, sizeof(int)) ;						// weight of each site
+	for (i=0 ; i<NSites ; i++)
+	{
+		w[i] =  INTEGER(coerceVector(R_w, INTSXP))[i] ;
+	}
+	
+	for (i=0 ; i<NSeqs ; i++)
+	{
+		R_seq = VECTOR_ELT(R_seqs, i) ;
+		seq = INTEGER(coerceVector(R_seq, INTSXP)) ;
+	
+		seqs[i] = calloc(NSites, sizeof(int)) ;
+		for (j=0 ; j<NSites ; j++)
+		{
+			seqs[i][j] = seq[j] - 1;						// zero based numbering for c
+			//Rprintf("%i ", seqs[i][j]) ;	
+		}
+		//Rprintf("\n") ;
+	}	
+	Rprintf("NInstances = %i, NSeqs=%i\n", NInstances, NSeqs) ;
+	smc_init(NInstances, seqs, w, NSeqs, NSites) ;
+	free(w) ;
+	for (j=0 ; j<NSeqs ; j++)
+	{
+		free(seqs[j]) ;
+	}
+	free(seqs) ;
+	SEXP R_rv ;
+	PROTECT(R_rv = allocVector(INTSXP, 1)) ; 
+	INTEGER(R_rv)[0] = 0 ;
+	UNPROTECT(1) ;
+	// do we return instances here?
+	return R_rv ;
+}
+
+void smc_init(int NInstances, int **seqs, int *w, int NSeqs, int NSites)
+{
+	int *smc_instances, i, rv ; 
+	int NNode = NSeqs - 1 ;
+	// create instances 
+	smc_instances = beagle_create_instances(NSeqs, NSites, NNode, NInstances) ;
+	
+	// initialise instances
+	for (i=0 ; i<NInstances ; i++)
+	{
+		rv = beagle_initialize_instance(smc_instances[i], NSeqs, NSites, seqs, w) ;
+	}
+	
+}
+
+SEXP smc_draw_R_old(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN, SEXP R_bnprob, SEXP R_K, SEXP R_seqs, SEXP R_Nseqs, SEXP R_NSites, SEXP R_w, SEXP R_mu)
 {
 	// wrapper for smc_draw
 	// draws a tree and trajectory based on an smc algorithm
@@ -419,9 +499,166 @@ SEXP smc_draw_R(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R
 		free(seqs[j]) ;
 	}
 	free(seqs) ;
+	//BeagleResourceList* br_list = beagleGetResourceList() ;
 	
+	//beagleFinalize();
 	return R_list ;
+	
 }
+
+SEXP smc_draw_R(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN, SEXP R_bnprob, SEXP R_K, SEXP R_seqs, SEXP R_Nseqs, SEXP R_NSites, SEXP R_w, SEXP R_mu)
+{
+	// wrapper for smc_draw
+	// draws a tree and trajectory based on an smc algorithm
+	
+	// input parameters
+	
+	int Np = INTEGER(coerceVector(R_Np, INTSXP))[0] ;		// number of SMC particles
+	int I0 = INTEGER(coerceVector(R_I0, INTSXP))[0] ;		// initial number of infected particles
+	int NS = INTEGER(coerceVector(R_NS, INTSXP))[0] ;		// number of particles in each host
+	int NHosts = INTEGER(coerceVector(R_NHosts, INTSXP))[0] ; // number of hosts
+	double *B = REAL(coerceVector(R_B, REALSXP)) ; 			// matrix of transmission coefficients
+	double dr = REAL(coerceVector(R_dr, REALSXP))[0] ; 		// death rate
+	double *ST = REAL(coerceVector(R_ST, REALSXP)) ;		// vector of sampling times
+	int *SN = INTEGER(coerceVector(R_SN, INTSXP)) ;			// vector of viral population sizes
+	double bn_prob = REAL(coerceVector(R_bnprob, REALSXP))[0] ;	//parameter for bottleneck size
+	int K = INTEGER(coerceVector(R_K, INTSXP))[0] ;			// bottleneck size
+	int NSeqs , NSites, *seq, i, j, **seqs, *w;
+	double ll ;
+	SEXP R_seq;
+	NSeqs = INTEGER(coerceVector(R_Nseqs, INTSXP))[0] ;		// number of sequences
+	NSites = INTEGER(coerceVector(R_NSites, INTSXP))[0] ;	// number of site patterns per sequence
+	seqs = calloc(NSeqs, sizeof(int*)) ;					// coded vectors for sequences
+	w = calloc(NSites, sizeof(int)) ;						// weight of each site
+	for (i=0 ; i<NSites ; i++)
+	{
+		w[i] =  INTEGER(coerceVector(R_w, INTSXP))[i] ;
+	}
+	
+	for (i=0 ; i<NSeqs ; i++)
+	{
+		R_seq = VECTOR_ELT(R_seqs, i) ;
+		seq = INTEGER(coerceVector(R_seq, INTSXP)) ;
+	
+		seqs[i] = calloc(NSites, sizeof(int)) ;
+		for (j=0 ; j<NSites ; j++)
+		{
+			seqs[i][j] = seq[j] - 1;						// zero based numbering for c
+			//Rprintf("%i ", seqs[i][j]) ;	
+		}
+		//Rprintf("\n") ;
+	}
+	double mu = REAL(coerceVector(R_mu, REALSXP))[0] ;		// mutation rate
+	
+	//Rprintf("read in parameters\n") ;
+	smcinfo2 * si ;
+	
+	//smc_init(1, seqs, w, 2, NSites) ;
+	si = smc_draw(Np, I0, NS, NHosts, B, dr, ST, SN, bn_prob, K, NSeqs, NSites, seqs, w, mu) ;
+	
+	
+	
+	
+	/*int i ;
+	SEXP R_sirlist, R_sir ;
+	PROTECT(R_sirlist = allocVector(VECSXP ,Np)) ;
+	for (i=0 ; i<Np ; i++)
+	{
+		R_sir = sample_cSIR_S_R(R_I0, R_NS, R_NHosts, R_B, R_dr, R_ST, R_SN, R_bnprob, R_K) ;
+		SET_VECTOR_ELT(R_sirlist, i, R_sir) ;
+	}
+	UNPROTECT(1) ;*/
+	// reconstruct trees
+	
+	SEXP R_list ;											// output to R
+	PROTECT(R_list = allocVector(VECSXP, 6)) ;
+	SEXP R_tr , R_I, R_S, R_T, R_Iend, R_ll;
+	int smp = si->smp, ti = si->sp[smp].sir_i, n_ti = si->n[ti];
+	
+
+	R_tr = phylo_to_R(si->sp[smp].tr) ;
+	SET_VECTOR_ELT(R_list, 0, R_tr) ;
+	PROTECT(R_I=allocMatrix(INTSXP,n_ti,NHosts)) ;
+	PROTECT(R_S=allocMatrix(INTSXP,n_ti,NHosts)) ;
+	PROTECT(R_T=allocMatrix(REALSXP,n_ti,4)) ;
+	PROTECT(R_Iend=allocMatrix(INTSXP,1,NHosts)) ;
+	PROTECT(R_ll = allocVector(REALSXP, 1)) ;
+	REAL(R_ll)[0] = si->ll ;
+	int * PR_I = INTEGER(R_I) ;
+	int * PR_S = INTEGER(R_S) ;
+	double * PR_T = REAL(R_T) ;
+	int *PR_Iend = INTEGER(R_Iend) ;
+
+	for (j=0; j< NHosts ; j++)
+	{
+		PR_Iend[j] = si->sir1[ti][2][j] ;
+		for (i=0; i< n_ti; i++)
+		{
+		
+			PR_I[i+j*n_ti]=si->sir1[ti][1][i*NHosts + j] ;
+			PR_S[i+j*n_ti]=si->sir1[ti][0][i*NHosts + j] ;
+		}
+	}
+
+	for (i=0; i<(n_ti) ; i++)
+	{
+		for (j=0; j<4; j++)
+		{
+			PR_T[i+j*n_ti] = si->sir2[ti][0][i*4+j] ;
+		}
+	}
+	
+	SET_VECTOR_ELT(R_list, 1, R_I) ;
+	SET_VECTOR_ELT(R_list, 2, R_S) ;
+	SET_VECTOR_ELT(R_list, 3, R_T) ;
+	SET_VECTOR_ELT(R_list, 4, R_Iend) ;
+	SET_VECTOR_ELT(R_list, 5, R_ll) ;
+	UNPROTECT(6) ;	
+	// free memory
+	
+	for (i=0 ; i<Np ; i++)
+	{
+		//Rprintf("free particle\n") ;
+		//smc_freeparticle(&sp_old[i]) ;
+		//smc_freeparticle(si[i].sp) ;
+		free(si->sir1[i][0]) ;
+		free(si->sir1[i][1]) ;
+		free(si->sir1[i][2]) ;
+		free(si->sir1[i]) ;
+		free(si->sir2[i][0]) ;
+		free(si->sir2[i]) ;
+		if (i != smp)
+		{
+			smc_freeparticle(&si->sp[i]) ;
+		}
+		else
+		{
+		if (si->sp[i].mig)
+		{	
+			free(si->sp[i].mig) ;
+		}
+		}
+	}
+	free(si->sir1) ;
+	free(si->sir2) ;
+	free(si->sp) ;
+	free(si->n) ;
+	free(si) ;
+	
+	// free memory
+	free(w) ;
+	for (j=0 ; j<NSeqs ; j++)
+	{
+		free(seqs[j]) ;
+	}
+	free(seqs) ;
+	//BeagleResourceList* br_list = beagleGetResourceList() ;
+	
+	//beagleFinalize();
+	return R_list ;
+	
+}
+
 
 
 SEXP smc_draw_prior_R(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN, SEXP R_bnprob, SEXP R_K)
@@ -675,7 +912,7 @@ smcinfo* smc_draw_prior(int Np, int I0, int NS, int NHosts, double *B, double dr
 	return(si) ;
 }
 
-smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, double *ST, int *SN, double bnprob, int K, int NSeqs, int NSites, int** seqs, int* w, double mu)
+smcinfo2 * smc_draw_old(int Np, int I0, int NS, int NHosts, double *B, double dr, double *ST, int *SN, double bnprob, int K, int NSeqs, int NSites, int** seqs, int* w, double mu)
 {
 	// draws a tree and trajectory based on an smc algorithm
 	int nthreads = omp_get_num_threads() ;
@@ -710,6 +947,8 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	// draw Np trajectories
 	int chunk = Np / 4 ;
 	int tid ;
+	
+	
 	#pragma omp parallel shared(traj_acc,chunk) private(i)
 	{
 	#pragma omp for schedule(dynamic,chunk) nowait
@@ -870,6 +1109,307 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	
 		}
 //		}
+		
+//		beagle_free_instances(Np, b_inst) ; 
+//		free(b_inst) ;
+//		Rprintf("freed instances\n") ;
+		for (i=0 ;  i<Np ;i++)
+		{
+			//Rprintf("freeing particle %i at %p, with tr at %p, mig at %p\n", i, &sp_old[i], sp_old[i].tr, sp_old[i].mig) ;
+			smc_freeparticle(&sp_old[i]) ;
+		//	Rprintf("new particle %i at %p, with tr at %p, mig at %p\n", i, &sp[i], sp[i].tr, sp[i].mig) ;
+		}
+		Ltot = smc_logspace_add(p, Np) ;
+		n_eff = 0 ;
+		for (i=0 ; i<Np ; i++)
+		{
+			p[i] = exp(p[i] -Ltot) ;
+			//Rprintf("%i ", sp[i].sir_i) ;
+			n_eff += p[i]*p[i] ;
+		}
+		//Rprintf("\n") ;
+		n_eff = (double )1/n_eff ;
+		//Rprintf("%8.4f\n", n_eff) ;
+		if (n_eff < n_eff_th)
+		{
+			smc_resample(Np, Np, p, s, 1) ;
+		}
+		else
+		{
+			for (i=0 ; i<Np ; i++)
+			{
+				s[i] = i ;
+			}
+		}
+	}
+	
+	
+	// select particle and trajectory
+	rmultinom(1, p, Np, s) ;
+	
+	
+	for (j=0 ; j<Np ; j++)
+	{
+		if (s[j]==1)
+		{
+			break ;		
+		}
+	}
+	
+	
+	
+	smcinfo2 * si  = calloc(1, sizeof(smcinfo2)) ;
+	si[0].sp = sp ;
+	si[0].sir1 = p_RVAL1 ;
+	si[0].sir2 = p_RVAL2 ;
+	si[0].n = n ;
+	si[0].ll = Ltot ;
+	si[0].smp = j ;
+	/*
+	for (i=0 ; i<Nt ; i++)
+	{
+		//Rprintf("%i ", sp[i].sir_i) ;
+		free(p_RVAL1[i][0]) ;
+		free(p_RVAL1[i][1]) ;
+		free(p_RVAL1[i][2]) ;
+		free(p_RVAL1[i]) ;
+		free(p_RVAL2[i][0]) ;
+		free(p_RVAL2[i]) ;
+	}
+	//Rprintf("\n") ;
+		
+	free(p_RVAL1) ;
+	free(p_RVAL2) ;
+	free(n) ;
+	for (i=0 ; i<Np ; i++)
+	{
+		//Rprintf("free particle\n") ;
+		//smc_freeparticle(&sp_old[i]) ;
+		
+		smc_freeparticle(&sp[i]) ;
+	}
+	free(sp) ;
+	
+	*/
+	free(traj_acc) ;
+	free(OBS) ;
+	free(OBS2) ;
+	free(p) ;
+	free(s) ;
+	
+	// free particles
+	
+	free(sp_old) ;
+	return(si) ;
+	
+	
+	
+	
+}
+
+smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, double *ST, int *SN, double bnprob, int K, int NSeqs, int NSites, int** seqs, int* w, double mu)
+{
+	// draws a tree and trajectory based on an smc algorithm
+	int nthreads = omp_get_num_threads() ;
+	Rprintf("number of threads = %i\n", nthreads) ;
+	// setup helper variables 
+	int i, j ;
+	double n_eff , n_eff_th = 1 * Np ;				// effective size of particle population
+	int *n = calloc(Np, sizeof(int)), Nt=Np ;		//vector of trajectory lengths
+	for (i=0 ; i<Np ; i++)
+	{
+		n[i] = 0 ;
+	}
+	
+	// set up particle systems
+	smcparticle * sp = calloc(Np, sizeof(smcparticle)) ;		// new particle set
+	smcparticle * sp_old = calloc(Np, sizeof(smcparticle)) ;	// old particle set
+	for (i=0 ; i<Np ; i++)
+	{
+		sp_old[i].mig = NULL ;
+		sp[i].mig = NULL ;
+	}
+	
+	int ***p_RVAL1 = calloc(Np, sizeof(int**)) ;				// pointer to integer matrices I, S, Iend
+	double ***p_RVAL2 = calloc(Np, sizeof(double**)) ;			// pointer to real matrices T, matrix of events
+	double *p = calloc(Np, sizeof(double)) ;
+	
+	double Ltot = 0;
+	int *s = calloc(Np, sizeof(int)) ;
+	int *traj_acc = calloc(Np, sizeof(int)) ;	//indicator vector of whether trajectory is accepted
+	int n_acc=0;
+	int ti, k , *b_inst ;
+	// draw Np trajectories
+	int chunk = Np / 4 ;
+	int tid ;
+	
+	
+	#pragma omp parallel shared(traj_acc,chunk, p_RVAL1, p_RVAL2, n, n_acc) private(i)
+	{
+	#pragma omp for schedule(dynamic,chunk) nowait
+	for (i=0 ; i<Nt ; i++)
+	{
+		//tid = omp_get_thread_num() ;
+		//Rprintf("%i %i\n", tid, i) ;
+		p_RVAL1[i] = calloc(3, sizeof(int*)) ;
+		p_RVAL2[i] = calloc(1, sizeof(double*)) ;
+		traj_acc[i] = 0 ;
+		while (traj_acc[i] == 0)
+		{
+			cSIR_iters_ST(&n[i], I0, NS, NHosts, B, dr, p_RVAL1[i], p_RVAL2[i], ST, SN, bnprob, K) ;
+			traj_acc[i] = smc_trajcheck(SN, p_RVAL1[i][2], NHosts) ;
+			
+			if (traj_acc[i] == 0)
+			{
+				free(p_RVAL1[i][0]) ;
+				free(p_RVAL1[i][1]) ;
+				free(p_RVAL1[i][2]) ;
+				free(p_RVAL2[i][0]) ;
+			}
+		}
+		//Rprintf("%i\t%i\t%i\n", n[i], traj_acc[i], i) ;
+		//Rprintf("%8.4f\t%8.4f\t%8.4f\t%8.4f\n", p_RVAL2[i][0][4], p_RVAL2[i][0][5], p_RVAL2[i][0][6], p_RVAL2[i][0][7]) ;
+		n_acc += traj_acc[i] ;
+	}
+	}
+	
+	
+	Rprintf("%i\n", n_acc) ;
+	for (i=0 ; i<Np ; i++)
+	{
+		//Rprintf("%i %i %i\n", p_RVAL1[i][2][0], p_RVAL1[i][2][1], p_RVAL1[i][2][2]) ;
+		p[i] = (traj_acc[i]==1) ? (double)1 / n_acc : 0 ;
+	}
+	smc_resample(Np, Nt, p, s, 2) ;
+	
+	int *OBS = calloc(NHosts, sizeof(int)) ;
+	int *OBS2 = calloc(NHosts, sizeof(int)) ;
+	smc_obs(SN, NHosts, 2, OBS) ;
+	smc_obs(SN, NHosts, 0, OBS2) ;
+	
+	// Draw Np particles - subtrees of size 2 ~ p(g_2)
+	#pragma omp parallel shared(chunk, s, n, SN, ST, OBS, OBS2, sp) private(i, ti)
+	{
+	#pragma omp for schedule(dynamic,chunk) nowait
+	for (i=0 ; i<Np ; i++)
+	{
+		ti = s[i] ;							// index of trajectory to use
+		sp[i].sir_i = ti ;
+		smc_treereconstruct(p_RVAL1[ti][1], p_RVAL2[ti][0], NHosts, n[ti], SN, ST, OBS, OBS2, 0, 0, 0, 0, &sp[i]) ;
+		// likelihood based on felsenstein pruning algorithm: log p(d_2 | g_2^k, mu)
+		//p[i] = beagle_init(2, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, 1);		
+		//p[i] = beagle_update_instance(i, NSeqs, sp[i].tr->edge, sp[i].tr->el, mu, 1) ;
+	}
+	}
+	
+	//b_inst = beagle_init_instances(2, NSites, 1, Np) ;
+	for (i=0 ; i<Np ; i++)
+	{
+	//	Rprintf("%i\n", b_inst[i]) ;
+	}
+	
+	//#pragma omp parallel shared(chunk, p) private(i)
+	//{
+	//#pragma omp for schedule(dynamic,chunk) nowait
+	for (i=0 ; i<Np ; i++)
+	{
+	//	Rprintf("updating %i\n", i) ;	
+		p[i] = beagle_update_instance(0, NSeqs, sp[i].tr->edge, sp[i].tr->el, mu, 1) ;
+	//	Rprintf("%8.4f\n", p[i]) ;
+		//p[i] = beagle_init(2, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, 1);				
+	//	Rprintf("%i\n", b_inst[i]) ;	
+		//p[i] = beagle_update_instance(b_inst[i], 2, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, 1);
+	}
+	//}
+
+	
+//	beagle_free_instances(Np, b_inst) ;
+//	free(b_inst) ;
+	//Rprintf("freed instances\n") ;
+	// approximation to log p(d_2 | mu)
+	Ltot = smc_logspace_add(p, Np) ;
+	
+	n_eff = 0 ;
+	for (i=0 ; i<Np ; i++)
+	{
+		p[i] = exp(p[i] -Ltot) ;
+		//Rprintf("%8.4f ", p[i]) ;
+		n_eff += p[i]*p[i] ;
+	}
+	n_eff = (double )1/n_eff ;				// effective size of particle population
+	//Rprintf("%8.4f\n", n_eff) ;
+	if (n_eff < n_eff_th)
+	{
+		smc_resample(Np, Np, p, s, 2) ;
+	}
+	else
+	{
+		for (i=0 ; i<Np ; i++)
+		{
+			s[i] = i ;
+		}
+	}
+	
+	
+	for (j=2 ; j<(NSeqs) ; j++)
+	{
+		//Rprintf("j = %i\n", j) ;
+		smc_obs(SN, NHosts, j+1, OBS) ;
+		smc_obs(SN, NHosts, j, OBS2) ;
+		for (i=0 ; i<NHosts ; i++)
+		{
+			OBS[i] = OBS[i] - OBS2[i] ; 
+		}
+	
+		// update particles
+		for (i=0 ; i<Np ; i++)
+		{
+			sp_old[i] = sp[i] ;
+			
+			sp[i].mig = NULL ;
+			sp[i].tr = NULL ;
+			//phylo_free(sp[i].tr) ;
+			//sp[i].tr = 0 ;
+		}	
+		#pragma omp parallel shared(chunk, s, n, SN, ST, OBS, OBS2, sp) private(i, ti)
+		{
+		#pragma omp for schedule(dynamic,chunk) nowait
+		for (i=0 ; i<Np ; i++)
+		{
+			ti = sp_old[s[i]].sir_i ;
+			
+			//smc_freeparticle(&sp[i]) ;
+			//Rprintf("freeing particle at %p\n", &sp[i]) ;
+			sp[i].sir_i = ti ;
+			//Rprintf("parent = %i, old tree at %p, old mig at   %p\n", s[i], sp_old[s[i]].tr, sp_old[s[i]].mig) ;
+			smc_treereconstruct(p_RVAL1[ti][1], p_RVAL2[ti][0], NHosts, n[ti], SN, ST, OBS, OBS2, 1, sp_old[s[i]].tr, sp_old[s[i]].mig, sp_old[s[i]].mig_n, &sp[i]) ;
+			//Rprintf("recon tree\n") ;
+			//for (k=0 ; k<sp[i].tr->Nedge ; k++)
+			//{
+				//Rprintf("%i %i\n", sp[i].tr->edge[k][0], sp[i].tr->edge[k][1]) ;
+			//}
+			
+			//p[i] = beagle_init(j+1, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, j);
+			//p[i] = beagle_update_instance(i, NSeqs, sp[i].tr->edge, sp[i].tr->el, mu, j) ;
+		}
+		}
+//		Rprintf("Initialising\n") ;
+		//b_inst = beagle_init_instances(j+1, NSites, j, Np) ;
+//	Rprintf("Instances\n") ;
+	for (i=0 ; i<Np ; i++)
+	{
+//		Rprintf("%i\n", b_inst[i]) ;
+	}
+	//#pragma omp parallel shared(chunk, p) private(i)
+	//{
+	//#pragma omp for schedule(dynamic,chunk) nowait
+	  for (i=0 ; i<Np; i++)
+		{
+			//p[i] = beagle_init(j+1, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, j);
+			//p[i] = beagle_update_instance(b_inst[i], j+1, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, j);
+			p[i] = beagle_update_instance(0, NSeqs, sp[i].tr->edge, sp[i].tr->el, mu, j) ;
+		}
+	//	}
 		
 //		beagle_free_instances(Np, b_inst) ; 
 //		free(b_inst) ;

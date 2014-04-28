@@ -63,8 +63,7 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
   
   # initialise model
   params <- cSIR_modelinit(x, init, dat, dat.params, mcmc.params)
-  
-  # initialise priors
+   # initialise priors
   priors <- list()
   priors$mr <- cSIR_mrprior(mr=params$mr, hp.params$mr, mode="d", is.log=TRUE)
   priors$dr <- cSIR_drprior(dr=params$dr, hp.params$dr, mode="d", is.log=TRUE)
@@ -85,7 +84,10 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
   # convert data 
   x <- phyDat(x) 
   
-  
+  Ninstances = 1 
+  #Ninstances = mcmc.params$Np 
+  rv <-  .Call("smc_init_R", Ninstances, x, attr(x, "weight"), sum(dat$SN), attr(x, "nr"))
+ 
   if (mcmc.params$acc.rate==1)
   {
     # calculate acceptance rates
@@ -156,8 +158,8 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
     	if (t %% 1 == 0)
     	{
     		print(sprintf("%s %i loglikelihood   %8.4f   Mutation rate   %8.8f  Death rate %8.4f BN %8.4f t_off %8.4f %i Move %i", format(Sys.time(), "%X"), t, params$ll, params$mr, params$dr,params$bn, params$t_off, params$K, m))
-			print(params$B)
-			print(t(params$tr_list$Itraj))
+			#print(params$B)
+			#print(t(params$tr_list$Itraj))
 		}
 	
     
@@ -182,6 +184,8 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
 		}
 		t <- t + 1
 		}
+		
+	.Call("smc_free_instances_R", Ninstances) ;
 	return(ch)
 }
 
