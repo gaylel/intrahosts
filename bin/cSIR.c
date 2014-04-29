@@ -1240,11 +1240,11 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	int n_acc=0;
 	int ti, k , *b_inst ;
 	// draw Np trajectories
-	int chunk = Np / 4 ;
+	int chunk = Np / 10 ;
 	int tid ;
 	
 	
-	#pragma omp parallel shared(traj_acc,chunk, p_RVAL1, p_RVAL2, n, n_acc) private(i)
+	#pragma omp parallel shared(traj_acc,chunk, p_RVAL1, p_RVAL2, n, n_acc	) private(i)
 	{
 	#pragma omp for schedule(dynamic,chunk) nowait
 	for (i=0 ; i<Nt ; i++)
@@ -1269,7 +1269,10 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 		}
 		//Rprintf("%i\t%i\t%i\n", n[i], traj_acc[i], i) ;
 		//Rprintf("%8.4f\t%8.4f\t%8.4f\t%8.4f\n", p_RVAL2[i][0][4], p_RVAL2[i][0][5], p_RVAL2[i][0][6], p_RVAL2[i][0][7]) ;
+		#pragma omp critical
+		{
 		n_acc += traj_acc[i] ;
+		}
 	}
 	}
 	
@@ -1288,7 +1291,7 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	smc_obs(SN, NHosts, 0, OBS2) ;
 	
 	// Draw Np particles - subtrees of size 2 ~ p(g_2)
-	#pragma omp parallel shared(chunk, s, n, SN, ST, OBS, OBS2, sp) private(i, ti)
+	#pragma omp parallel shared(chunk, s, n, SN, ST, OBS, OBS2, sp, p_RVAL1, p_RVAL2) private(i, ti)
 	{
 	#pragma omp for schedule(dynamic,chunk) nowait
 	for (i=0 ; i<Np ; i++)
@@ -1371,7 +1374,7 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 			//phylo_free(sp[i].tr) ;
 			//sp[i].tr = 0 ;
 		}	
-		#pragma omp parallel shared(chunk, s, n, SN, ST, OBS, OBS2, sp) private(i, ti)
+		#pragma omp parallel shared(chunk, s, n, SN, ST, OBS, OBS2, sp, p_RVAL1, p_RVAL2) private(i, ti)
 		{
 		#pragma omp for schedule(dynamic,chunk) nowait
 		for (i=0 ; i<Np ; i++)
@@ -2095,7 +2098,7 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 	{
 		ha = (int) *PR_T2[1][i] ;
 		hb = (int) *PR_T2[2][i] ;
-		if (ha == hb && (*PR_T2[0][i] <= ST[ha]))
+		if ((ha == hb) && (*PR_T2[0][i] <= (ST[ha] + small_val)))
 		{
 			Tend[ha] = i ; 
 		}
