@@ -98,6 +98,16 @@ void smc_init(int NInstances, int **seqs, int *w, int NSeqs, int NSites) ;
 SEXP smc_draw_R_old(SEXP R_Np, SEXP R_I0, SEXP R_NS, SEXP R_NHosts, SEXP R_B, SEXP R_dr, SEXP R_ST, SEXP R_SN, SEXP R_bnprob, SEXP R_K, SEXP R_seqs, SEXP R_Nseqs, SEXP R_NSites, SEXP R_w, SEXP R_mu) ;
 smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, double *ST, int *SN, double bnprob, int K, int NSeqs, int NSites, int** seqs, int* w, double mu) ;
 SEXP smc_free_instances_R(SEXP R_NInstances) ;
+int double_compare(double a, double b) ;
+
+int double_compare(double a, double b)
+{
+	double small_val = 1e-6 ;
+	int same = 0 ;
+	if (fabs(a - b) < small_val)
+		same = 1 ;
+	return same ;
+}
 
 void beagle_init_R(SEXP R_seqs, SEXP R_Nseqs, SEXP R_NSites, SEXP R_w, SEXP R_tr)
 {
@@ -1240,7 +1250,7 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	int n_acc=0;
 	int ti, k , *b_inst ;
 	// draw Np trajectories
-	int chunk = Np / 10 ;
+	int chunk = Np / 4 ;
 	int tid ;
 	
 	
@@ -2098,7 +2108,8 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 	{
 		ha = (int) *PR_T2[1][i] ;
 		hb = (int) *PR_T2[2][i] ;
-		if ((ha == hb) && (*PR_T2[0][i] <= (ST[ha] + small_val)))
+		//if ((ha == hb) && (*PR_T2[0][i] <= (ST[ha] + small_val)))
+		if ((ha==hb) && (double_compare(*PR_T2[0][i], ST[ha])==1))
 		{
 			Tend[ha] = i ; 
 		}
@@ -2225,7 +2236,8 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 					{			
 						if (bt_n >= 0)
 						{
-						while ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1])
+						//while ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1])
+						while ((double_compare(bt_old[bt_n][0], *PR_T2[0][i-1])==1) ||  ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1]) )
 						{
 							ch[0] = tr_old->edge[bt_n*2 + 1][1] ;
         					ch[1] = tr_old->edge[bt_n*2][1] ;
