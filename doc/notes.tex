@@ -328,7 +328,86 @@ where $\hat{p}(\mathcal{D} \mid \Theta_I)$ is the particle filter's estimate of 
 
 \subsection{Particle filter for trees}
 We use the notation: $g_n^k$ to denote a genealogy of the first $n$ sequences from $\mathcal{D}$, with index $k$, and the associated trajectory by $I_n^k$. The particle cloud is
-given by $\{\mathbf{g}_n, \mathbf{I}_n\}=\{g_n^k,  I_n^k \mid k=1,..,N_p\}$  
+given by $\{\mathbf{g}_n, \mathbf{I}_n\}=\{g_n^k,  I_n^k \mid k=1,..,N_p\}$. Let $N_s = \sum_i P_i$ denote the number of sequences in $\mathcal{D}$. 
+
+In the algorithm, we are looking to sample from the space of trees with $N_s$ tips (which we will denote by $\mathcal{X}^{N_s}$). We assume that any object $g$ in $\mathcal{X}^{N_s}$ can 
+be constructed incrementally through a sequence of intermediate states   ${g}_1,..., {g}_{N_s-1}$ in  $\mathcal{X}^{1}, ..., \mathcal{X}^{N_s -1}$. The reconstruction of $g$ depends on the
+trajectory $I$. When generating the infected populations from the SIR dynamical process, we keep track of the events in a matrix $\mathbf{T}$, where the $i$th row (corresponding to the $i$th event) is $\mathbf{T}_i=\{t_i, h_a, h_b, v\}$, where $t_i$ is the time of the event, $v$ is the type of event $v \in \{-1,1, k\}$ (recovery, within-host infection, between-host infection respectively) from host $h_b$ to $h_a$. See Algorithm \ref{alg:g_from_I}.
+
+
+\begin{algorithm}
+\caption{Reconstructing ancestral tree $g$ from infected population trajectories $I[t]$, $\mathbf{T}$ \label{alg:g_from_I}}
+\begin{algorithmic}
+\STATE ${\textrm{Nodes}_{\textrm{anc}}=\{\}}$ , ${\textrm{t}_{\textrm{anc}}=\{\}}$ \COMMENT{list of ancestral nodes and times, for each host}
+\STATE ${\textrm{Nodes}_{\textrm{ex}}}=\{I[T][1] - P_1, ..., I[T][N_H] - P_{N_H}\}$,   \COMMENT{vector of number of extinct nodes for each host}
+\STATE $g=\{\}$ \COMMENT{ancestral tree}
+\STATE $n_{\textrm{int}}= N_s + 1$ \COMMENT{internal node of tree}
+\STATE Label sequences in $\mathcal{D}$ for each host: $\mathcal{L}_1=\{1,...,P_1\}$,  $\mathcal{L}_2=\{P_1+1,...,P_1 + P_2\}$, 
+\FOR{$t=T$ \TO $t=1$ \COMMENT{for each event time}}
+{
+\IF{$t=s_i$, where $i \in 1,...,N_H$ \COMMENT{if at sampling time for host i}}	
+{
+	\STATE $\textrm{Nodes}_{\textrm{anc}}[i] \gets \mathcal{L}_i $
+	\STATE $\textrm{t}_{\textrm{anc}}[i] \gets \{t, t, ..., t\}$
+}
+\ENDIF
+\IF{event at $t$ = recovery in host $i$}	
+	\STATE $\textrm{Nodes}_{\textrm{ex}}[i] \gets \textrm{Nodes}_{\textrm{ex}}[i]  + 1 $
+\ENDIF
+\IF{event at $t$ = infection within host $i$}	
+{
+	\STATE Pick a pair of nodes $n_a$, $n_b$ from all nodes (extinct and ancestral) in $i$
+	\IF  {$n_a$ and $n_b$ are from $\textrm{Nodes}_{\textrm{anc}}[i]$} 
+	{
+		\STATE {\it Coalescent event in host $i$}
+		\STATE  Add new edges $\{n_{\textrm{int}}, n_a \}$, $\{n_{\textrm{int}}, n_b \}$ , with lengths $\textrm{t}_{\textrm{anc}}[i][n_a] - t$, $\textrm{t}_{\textrm{anc}}[i][n_b] - t$ to $g$:
+		\STATE Replace $n_a$ and $n_b$ in $\textrm{Nodes}_{\textrm{anc}}[i]$ with internal node $n_{\textrm{int}}$ with corresponding time $t$
+		\STATE $n_{\textrm{int}} \gets n_{\textrm{int}} + 1$
+	}
+	\ELSE
+	{
+		\STATE $\textrm{Nodes}_{\textrm{ex}}[i] \gets \textrm{Nodes}_{\textrm{ex}}[i]  - 1 $
+	}
+	\ENDIF
+}
+\ENDIF
+\IF{event at $t$ = transmission of $k$ nodes from host $i$ to host $j$}	
+{
+	\STATE Pick $k$ nodes $n_a^1,...,n_a^k$ from all nodes (extinct and ancestral) in $i$
+	\STATE Pick $k$ nodes $n_b^1,...,n_b^k$ from all nodes (extinct and ancestral) in $j$
+	\STATE Move  $n_b^1,...,n_b^k$ to $\textrm{Nodes}_{\textrm{anc}}[i]$ 
+	\FOR {$n=1$ \TO $n=k$}
+	{
+	\IF  {$n_a^n$ is from $\textrm{Nodes}_{\textrm{anc}}[i]$ and $n_b^n$ was from $\textrm{Nodes}_{\textrm{anc}}[j]$} 
+	{
+		\STATE {\it Coalescent event between host $i$ and host $j$}
+		\STATE  Add new edges $\{n_{\textrm{int}}, n_a \}$, $\{n_{\textrm{int}}, n_b \}$ , with lengths $\textrm{t}_{\textrm{anc}}[i][n_a] - t$, $\textrm{t}_{\textrm{anc}}[i][n_b] - t$ to $g$
+		\STATE Replace $n_a$ and $n_b$ in $\textrm{Nodes}_{\textrm{anc}}[i]$ with internal node $n_{\textrm{int}}$ with corresponding time $t$
+		\STATE $n_{\textrm{int}} \gets n_{\textrm{int}} + 1$
+	}
+	\ELSE
+	{
+		\IF {$n_b^n$ was from $\textrm{Nodes}_{\textrm{anc}}[j]$}
+		{
+		\STATE $\textrm{Nodes}_{\textrm{ex}}[i] \gets \textrm{Nodes}_{\textrm{ex}}[i]  - 1 $
+		}
+		\ELSE
+		{
+		\STATE $\textrm{Nodes}_{\textrm{ex}}[j] \gets \textrm{Nodes}_{\textrm{ex}}[j]  - 1 $
+		}
+		\ENDIF
+	}
+	\ENDIF
+	}
+	\ENDFOR
+}
+\ENDIF
+
+}
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
 
 \section{Summary}
 \begin{tabular}{|l|l|}
