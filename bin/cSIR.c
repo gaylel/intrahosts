@@ -3032,9 +3032,9 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 			//t_n	= ST[h_i] ;
 			ST2[h_i] = DBL_MAX ;
 			// update S, I T
-			S=Realloc(S,(n+1)*NHosts ,int) ;
-			I=Realloc(I,(n+1)*NHosts ,int) ;
-			T=Realloc(T,(n+1)*4 ,double) ;
+			S=realloc(S,(n+1)*NHosts *sizeof(int)) ;
+			I=realloc(I,(n+1)*NHosts *sizeof(int)) ;
+			T=realloc(T,(n+1)*4 * sizeof(double)) ;
 	
 			for (i=0 ; i< NHosts; i++)
 			{
@@ -3101,9 +3101,9 @@ void cSIR_iter_ST(int *np, int nS, int NHosts, double *B, double dr, int **p1, d
 	// if there are any more infected left ..
 	
 	// increase size of S,I,T
-		S=Realloc(S,(n+1)*NHosts ,int) ;
-		I=Realloc(I,(n+1)*NHosts ,int) ;
-		T=Realloc(T,(n+1)*4 ,double) ;
+		S=realloc(S,(n+1)*NHosts *sizeof(int)) ;
+		I=realloc(I,(n+1)*NHosts *sizeof(int)) ;
+		T=realloc(T,(n+1)*4 *sizeof(double)) ;
 	for (i=0 ; i< NHosts; i++)
 	{
 			S[i+(n*NHosts)] = S[i+((n-1)*NHosts)] ;
