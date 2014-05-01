@@ -102,7 +102,7 @@ int double_compare(double a, double b) ;
 
 int double_compare(double a, double b)
 {
-	double small_val = 1e-6 ;
+	double small_val = 1e-10 ;
 	int same = 0 ;
 	if (fabs(a - b) < small_val)
 		same = 1 ;
@@ -1477,7 +1477,7 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	si[0].sir1 = p_RVAL1 ;
 	si[0].sir2 = p_RVAL2 ;
 	si[0].n = n ;
-	si[0].ll = Ltot ;
+	si[0].ll = Ltot - log(Np);
 	si[0].smp = j ;
 	/*
 	for (i=0 ; i<Nt ; i++)
@@ -2237,7 +2237,7 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 						if (bt_n >= 0)
 						{
 						//while ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1])
-						while ((double_compare(bt_old[bt_n][0], *PR_T2[0][i-1])==1) ||  ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1]) )
+						while ((double_compare(bt_old[bt_n][0], *PR_T2[0][i-1])==0) && ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1]) )
 						{
 							ch[0] = tr_old->edge[bt_n*2 + 1][1] ;
         					ch[1] = tr_old->edge[bt_n*2][1] ;
