@@ -2237,7 +2237,8 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 						if (bt_n >= 0)
 						{
 						//while ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1])
-						while ((double_compare(bt_old[bt_n][0], *PR_T2[0][i-1])==0) && ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1]) )
+						//while ((double_compare(bt_old[bt_n][0], *PR_T2[0][i-1])==0) && ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1]) )
+						while ((double_compare(bt_old[bt_n][0], *PR_T2[0][i])==1))
 						{
 							ch[0] = tr_old->edge[bt_n*2 + 1][1] ;
         					ch[1] = tr_old->edge[bt_n*2][1] ;
