@@ -2254,7 +2254,8 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
         				    llist_print(Nodes[1].n) ;
 							*/
 							// create coalescent event in new tree
-        					
+        					if (Nodes2[ha].n == NULL)
+        						Rprintf("Trying to access empty set of nodes in host ha=%i with host hb = %i at time %8.4f, %8.4f\n", ha, hb, bt_old[bt_n][0], *PR_T2[0][i]) ;
         					ch[2] = llist_get_ind_i(ch[0], Nodes2[ha].n) ;
         					ch[3] = llist_get_ind_i(ch[1], Nodes2[hb].n) ;
         					//Rprintf("birth %i %i %i %i %i\n", ch[0], ch[1], ch[2], ch[3], ei) ;
@@ -2317,7 +2318,8 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
         				}
         				if (mig2_n < mig2_N)
         				{
-        					while ((mig2[mig2_n]-small_val) > *PR_T2[0][i-1])
+        					//while ((mig2[mig2_n]-small_val) > *PR_T2[0][i-1])
+        					while ((double_compare(mig2[mig2_n], *PR_T2[0][i])==1))
         					{
         						//Rprintf("Old migration, node=%i, ha=%i, hb=%i\n", (int) mig2[mig2_n + 3*mig2_N], ha, hb) ;
         						
