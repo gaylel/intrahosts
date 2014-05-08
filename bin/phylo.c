@@ -38,6 +38,8 @@ phylo* phylo_dup(phylo *tr)
 		tr2->edge[i][0] = tr->edge[i][0] ; 
 		tr2->edge[i][1] = tr->edge[i][1] ; 
 	}
+	
+	
 	return tr2 ;	
 }
 
@@ -57,12 +59,12 @@ void phylo_free(phylo *tr)
 }
 
 
-double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)
+double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts, double *mig, int mig_N)
 {
 	// returning branching times for a phylo structure where the edges are ordered by intNode indices
 	// tipinfo[i] : time at host i
 	// hostinfo[i] : number of tips in host i
-	int NTips=tr->NNode+1, i, j, k, Ni, *hosts, ch1, ch2 ;
+	int NTips=tr->NNode+1, i, j, k, Ni, *hosts, ch1, ch2, mig_n=0 ;
 	double **bt, *tips ;
 	// create structures
 	hosts = calloc(NTips+tr->NNode,sizeof(int)) ;
@@ -99,12 +101,20 @@ double** phylo_bt(phylo* tr, double *tipinfo, int *hostinfo, int NHosts)
 		
 		bt[i][0]=tips[ch1] - tr->el[j] ;
 		tips[Ni]=bt[i][0] ;
+		while ((mig_n < mig_N) && (mig[mig_n] > tips[Ni]))
+		{
+			hosts[(int) mig[(3 * mig_N) + mig_n]] =  mig[mig_N + mig_n] ;
+			mig_n ++ ;
+		}
 		bt[i][1]=hosts[Ni] ;
 		bt[i][2]=hosts[ch1] ;
 		bt[i][3]=hosts[ch2] ;
 		//Rprintf("%8.4f %i %i %i\n", bt[i][0], hosts[Ni], hosts[ch1], hosts[ch2]) ; 
 		
 	}
+	
+	
+	
 	free(hosts) ;
 	free(tips) ;
 	return bt ;

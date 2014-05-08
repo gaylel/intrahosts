@@ -1224,7 +1224,7 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	Rprintf("number of threads = %i\n", nthreads) ;
 	// setup helper variables 
 	int i, j ;
-	double n_eff , n_eff_th = 1 * Np ;				// effective size of particle population
+	double n_eff , n_eff_th = 0.5 * Np ;				// effective size of particle population
 	int *n = calloc(Np, sizeof(int)), Nt=Np ;		//vector of trajectory lengths
 	for (i=0 ; i<Np ; i++)
 	{
@@ -1321,19 +1321,20 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	//	Rprintf("%i\n", b_inst[i]) ;
 	}
 	
-	//#pragma omp parallel shared(chunk, p) private(i)
-	//{
-	//#pragma omp for schedule(dynamic,chunk) nowait
+	#pragma omp parallel shared(chunk, p, sp) private(i, tid)
+	{
+	#pragma omp for schedule(dynamic,chunk) nowait
 	for (i=0 ; i<Np ; i++)
 	{
 	//	Rprintf("updating %i\n", i) ;	
-		p[i] = beagle_update_instance(0, NSeqs, sp[i].tr->edge, sp[i].tr->el, mu, 1) ;
+		tid = omp_get_thread_num() ;
+		p[i] = beagle_update_instance(tid, NSeqs, sp[i].tr->edge, sp[i].tr->el, mu, 1) ;
 	//	Rprintf("%8.4f\n", p[i]) ;
 		//p[i] = beagle_init(2, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, 1);				
 	//	Rprintf("%i\n", b_inst[i]) ;	
 		//p[i] = beagle_update_instance(b_inst[i], 2, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, 1);
 	}
-	//}
+	}
 
 	
 //	beagle_free_instances(Np, b_inst) ;
@@ -1413,16 +1414,17 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 	{
 //		Rprintf("%i\n", b_inst[i]) ;
 	}
-	//#pragma omp parallel shared(chunk, p) private(i)
-	//{
-	//#pragma omp for schedule(dynamic,chunk) nowait
+	#pragma omp parallel shared(chunk, p, sp) private(i, tid)
+	{
+	#pragma omp for schedule(dynamic,chunk) nowait
 	  for (i=0 ; i<Np; i++)
 		{
+			tid = omp_get_thread_num() ;
 			//p[i] = beagle_init(j+1, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, j);
 			//p[i] = beagle_update_instance(b_inst[i], j+1, NSites, seqs, w, sp[i].tr->edge, sp[i].tr->el, mu, j);
-			p[i] = beagle_update_instance(0, NSeqs, sp[i].tr->edge, sp[i].tr->el, mu, j) ;
+			p[i] = beagle_update_instance(tid, NSeqs, sp[i].tr->edge, sp[i].tr->el, mu, j) ;
 		}
-	//	}
+		}
 		
 //		beagle_free_instances(Np, b_inst) ; 
 //		free(b_inst) ;
@@ -1438,6 +1440,7 @@ smcinfo2 * smc_draw(int Np, int I0, int NS, int NHosts, double *B, double dr, do
 		for (i=0 ; i<Np ; i++)
 		{
 			p[i] = exp(p[i] -Ltot) ;
+			//Rprintf("%8.4f ", p[i]) ;
 			//Rprintf("%i ", sp[i].sir_i) ;
 			n_eff += p[i]*p[i] ;
 		}
@@ -2054,7 +2057,9 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 	{
 		//Rprintf("has_old==1\n") ;
 		// calculate branching times
-		bt_old = phylo_bt(tr_old3, ST, OBS2, NHosts) ;
+		bt_old = phylo_bt(tr_old3, ST, OBS2, NHosts, mig3, mig3_N) ;
+		
+		
 		bt_n = tr_old3->NNode - 1 ;
 		mig2 = calloc(mig2_N * 4, sizeof(double)) ;
 		for (i=0 ; i<(mig2_N * 4) ; i++)
@@ -2238,7 +2243,8 @@ void smc_treereconstruct(int *PR_I, double *PR_T, int NHosts, int TN, int *SN, d
 						{
 						//while ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1])
 						//while ((double_compare(bt_old[bt_n][0], *PR_T2[0][i-1])==0) && ((bt_old[bt_n][0]-small_val) > *PR_T2[0][i-1]) )
-						while ((double_compare(bt_old[bt_n][0], *PR_T2[0][i])==1))
+						//Rprintf("%8.4f %i %i %8.4f %i %i\n", bt_old[bt_n][0], (int)bt_old[bt_n][2], (int)bt_old[bt_n][3], *PR_T2[0][i], ha, hb) ;
+						while ((double_compare(bt_old[bt_n][0], *PR_T2[0][i])==1) && ((int)bt_old[bt_n][3]==ha) && ((int) bt_old[bt_n][2]==hb))
 						{
 							ch[0] = tr_old->edge[bt_n*2 + 1][1] ;
         					ch[1] = tr_old->edge[bt_n*2][1] ;

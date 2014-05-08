@@ -95,7 +95,7 @@ cSIR_runmcmc <- function(x, dat, opt, init, mcmc.params, hp.params)
   x <- phyDat(x) 
   str(x)
   
-  Ninstances = 1 
+  Ninstances = 4
   #Ninstances = mcmc.params$Np 
   rv <-  .Call("smc_init_R", Ninstances, x, attr(x, "weight"), sum(dat$SN), attr(x, "nr"))
  
